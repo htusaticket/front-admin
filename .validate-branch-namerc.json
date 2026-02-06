@@ -1,0 +1,4 @@
+{
+  "pattern": "^(main|master|develop|(feature|bugfix|hotfix|release)\/[a-z0-9-]+([a-z0-9-]))$",
+  "errorMsg": "Branch name does not follow the convention: main, master, develop, or (feature|bugfix|hotfix|release)/task-name"
+}

@@ -1,0 +1,23 @@
+
+
+echo "🔍 Running pre-commit checks..."
+
+# Validate branch name
+echo "🌿 Validating branch name..."
+npx validate-branch-name
+
+# Run lint-staged
+echo "🧹 Running lint-staged (0 warnings allowed)..."
+npx lint-staged
+
+# Run TypeScript type checking
+echo "🔧 Running TypeScript type check..."
+npm run type-check
+
+# Run tests if they exist
+if [ -d "__tests__" ] || [ -d "test" ]; then
+  echo "🧪 Running tests..."
+  npm test
+fi
+
+echo "✅ Pre-commit checks passed!"

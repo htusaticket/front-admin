@@ -1,0 +1,18 @@
+# Ignore artifacts:
+build
+coverage
+.next
+out
+*.log
+node_modules
+
+# Ignore all HTML files:
+*.html
+
+# Ignore minified files:
+*.min.js
+*.min.css
+
+# Ignore generated files:
+*.generated.ts
+*.generated.js

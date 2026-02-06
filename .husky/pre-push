@@ -1,0 +1,3 @@
+
+npm run validate-branch-name
+npm ci --dry-run
