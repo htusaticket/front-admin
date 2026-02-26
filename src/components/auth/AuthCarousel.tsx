@@ -5,19 +5,24 @@ import { useEffect, useState } from "react";
 
 const slides = [
   {
-    title: "High Ticket English",
+    title: "High Ticket Mindset",
     description:
-      "Aprende inglés de forma interactiva y efectiva con nuestros cursos personalizados.",
+      "You do not need a perfect plan. You just need the next step. Change your thinking, then change your life.",
   },
   {
-    title: "Conversación en Vivo",
+    title: "Dream Big, Act Daily",
     description:
-      "Mejora tu fluidez practicando diariamente con profesores nativos y estudiantes de todo el mundo.",
+      "You miss 100% of the shots you do not take. Show up anyway, no matter how you feel.",
   },
   {
-    title: "Certificación Global",
+    title: "Remember the Goal",
     description:
-      "Obtén certificados reconocidos internacionalmente que impulsarán tu carrera profesional.",
+      "Your greatest weapon is your mind. Train it to see opportunities, not obstacles.",
+  },
+  {
+    title: "Trust the Process",
+    description:
+      "Stay on track with a proven process and real coaching. Results follow consistent execution.",
   },
 ];
 

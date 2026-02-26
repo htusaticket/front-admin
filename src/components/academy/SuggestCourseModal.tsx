@@ -26,19 +26,19 @@ export function SuggestCourseModal({ isOpen, onClose, moduleTitle }: SuggestCour
 
   const filteredStudents = MOCK_STUDENTS.filter(student => 
     student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.email.toLowerCase().includes(searchQuery.toLowerCase())
+    student.email.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const handleSend = () => {
     // Simulate API call
     setTimeout(() => {
-        setIsSuccess(true);
-        setTimeout(() => {
-            setIsSuccess(false);
-            setSelectedStudent(null);
-            setSearchQuery("");
-            onClose();
-        }, 2000);
+      setIsSuccess(true);
+      setTimeout(() => {
+        setIsSuccess(false);
+        setSelectedStudent(null);
+        setSearchQuery("");
+        onClose();
+      }, 2000);
     }, 500);
   };
 
@@ -63,84 +63,84 @@ export function SuggestCourseModal({ isOpen, onClose, moduleTitle }: SuggestCour
             >
               {isSuccess ? (
                 <div className="flex flex-col items-center justify-center p-12 text-center">
-                    <div className="mb-4 rounded-full bg-green-100 p-3">
-                        <CheckCircle className="h-8 w-8 text-green-600" />
-                    </div>
-                    <h3 className="mb-2 text-xl font-bold text-gray-900">Suggestion Sent!</h3>
-                    <p className="text-gray-500">
-                        "{moduleTitle}" has been recommended to the student.
-                    </p>
+                  <div className="mb-4 rounded-full bg-green-100 p-3">
+                    <CheckCircle className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h3 className="mb-2 text-xl font-bold text-gray-900">Suggestion Sent!</h3>
+                  <p className="text-gray-500">
+                        &quot;{moduleTitle}&quot; has been recommended to the student.
+                  </p>
                 </div>
               ) : (
-                  <>
-                    <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-                        <h2 className="font-display text-lg font-bold text-gray-900">
+                <>
+                  <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+                    <h2 className="font-display text-lg font-bold text-gray-900">
                         Suggest Course
-                        </h2>
-                        <button
-                        onClick={onClose}
-                        className="rounded-full p-2 text-gray-500 hover:bg-gray-100 transition-colors"
-                        >
-                        <X className="h-5 w-5" />
-                        </button>
+                    </h2>
+                    <button
+                      onClick={onClose}
+                      className="rounded-full p-2 text-gray-500 hover:bg-gray-100 transition-colors"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  <div className="p-6">
+                    <p className="mb-4 text-sm text-gray-500">
+                            Select a student to recommend <span className="font-semibold text-gray-900">&quot;{moduleTitle}&quot;</span> to.
+                    </p>
+
+                    <div className="relative mb-4">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search students..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full rounded-xl border border-gray-200 pl-10 pr-4 py-2 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                      />
                     </div>
 
-                    <div className="p-6">
-                        <p className="mb-4 text-sm text-gray-500">
-                            Select a student to recommend <span className="font-semibold text-gray-900">"{moduleTitle}"</span> to.
-                        </p>
-
-                        <div className="relative mb-4">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Search students..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full rounded-xl border border-gray-200 pl-10 pr-4 py-2 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-                            />
-                        </div>
-
-                        <div className="max-h-60 overflow-y-auto space-y-2 mb-6">
-                            {filteredStudents.map((student) => (
-                                <button
-                                    key={student.id}
-                                    onClick={() => setSelectedStudent(student.id)}
-                                    className={`flex w-full items-center gap-3 rounded-xl border p-3 transition-all ${
-                                        selectedStudent === student.id
-                                            ? "border-brand-primary bg-brand-primary/5 ring-1 ring-brand-primary"
-                                            : "border-gray-100 hover:border-gray-200 hover:bg-gray-50"
-                                    }`}
-                                >
-                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-600">
-                                        {student.avatar}
-                                    </div>
-                                    <div className="text-left">
-                                        <p className="text-sm font-semibold text-gray-900">{student.name}</p>
-                                        <p className="text-xs text-gray-500">{student.email}</p>
-                                    </div>
-                                    {selectedStudent === student.id && (
-                                        <div className="ml-auto text-brand-primary">
-                                            <CheckCircle className="h-5 w-5" />
-                                        </div>
-                                    )}
-                                </button>
-                            ))}
-                            {filteredStudents.length === 0 && (
-                                <p className="text-center text-sm text-gray-500 py-4">No students found.</p>
-                            )}
-                        </div>
-
+                    <div className="max-h-60 overflow-y-auto space-y-2 mb-6">
+                      {filteredStudents.map((student) => (
                         <button
-                            onClick={handleSend}
-                            disabled={!selectedStudent}
-                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-primary px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                          key={student.id}
+                          onClick={() => setSelectedStudent(student.id)}
+                          className={`flex w-full items-center gap-3 rounded-xl border p-3 transition-all ${
+                            selectedStudent === student.id
+                              ? "border-brand-primary bg-brand-primary/5 ring-1 ring-brand-primary"
+                              : "border-gray-100 hover:border-gray-200 hover:bg-gray-50"
+                          }`}
                         >
-                            <Send className="h-4 w-4" />
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-600">
+                            {student.avatar}
+                          </div>
+                          <div className="text-left">
+                            <p className="text-sm font-semibold text-gray-900">{student.name}</p>
+                            <p className="text-xs text-gray-500">{student.email}</p>
+                          </div>
+                          {selectedStudent === student.id && (
+                            <div className="ml-auto text-brand-primary">
+                              <CheckCircle className="h-5 w-5" />
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                      {filteredStudents.length === 0 && (
+                        <p className="text-center text-sm text-gray-500 py-4">No students found.</p>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={handleSend}
+                      disabled={!selectedStudent}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-primary px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                    >
+                      <Send className="h-4 w-4" />
                             Send Recommendation
-                        </button>
-                    </div>
-                  </>
+                    </button>
+                  </div>
+                </>
               )}
             </motion.div>
           </div>

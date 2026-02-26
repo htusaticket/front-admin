@@ -23,8 +23,10 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
     pdfFiles: [] as File[],
   });
 
+  // Sync form data with initialData prop - this is a valid use case for setState in effect
   useEffect(() => {
     if (isOpen && initialData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         title: initialData.title || "",
         description: initialData.description || "",
@@ -37,6 +39,7 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
       });
     } else if (isOpen && !initialData) {
       // Reset form when opening in create mode
+       
       setFormData({
         title: "",
         description: "",
@@ -52,8 +55,7 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Connect to API
-    console.log("Form submitted:", formData);
+    // TODO: Connect to API - formData contains the submitted data
     onClose();
   };
 
@@ -208,7 +210,7 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
                             setFormData({ 
                               ...formData, 
                               coverImage: file,
-                              previewUrl: URL.createObjectURL(file)
+                              previewUrl: URL.createObjectURL(file),
                             });
                           }
                         }}
@@ -217,6 +219,7 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
                       <div className="text-center w-full">
                         {formData.previewUrl ? (
                           <div className="relative mx-auto aspect-video w-full max-w-sm overflow-hidden rounded-lg shadow-sm">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img 
                               src={formData.previewUrl} 
                               alt="Preview" 
@@ -266,7 +269,7 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
                             const newFiles = Array.from(e.target.files);
                             setFormData(prev => ({ 
                               ...prev, 
-                              pdfFiles: [...prev.pdfFiles, ...newFiles]
+                              pdfFiles: [...prev.pdfFiles, ...newFiles],
                             }));
                           }
                         }}
@@ -289,9 +292,9 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
                     {/* File List */}
                     {formData.pdfFiles.length > 0 && (
                       <div className="mt-3 space-y-2">
-                        {formData.pdfFiles.map((file, index) => (
+                        {formData.pdfFiles.map((file, fileIndex) => (
                           <div 
-                            key={index}
+                            key={file.name}
                             className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-3 shadow-sm"
                           >
                             <div className="flex items-center gap-3 overflow-hidden">
@@ -312,7 +315,7 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
                               onClick={() => {
                                 setFormData(prev => ({
                                   ...prev,
-                                  pdfFiles: prev.pdfFiles.filter((_, i) => i !== index)
+                                  pdfFiles: prev.pdfFiles.filter((_, i) => i !== fileIndex),
                                 }));
                               }}
                               className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
@@ -324,7 +327,7 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
                       </div>
                     )}
                   </div>
-          </div>
+                </div>
 
                 {/* Footer */}
                 <div className="flex flex-none items-center justify-end gap-3 bg-white px-6 py-4">
