@@ -29,3 +29,6 @@ export interface ErrorResponse {
   statusCode: number;
   details?: Record<string, unknown>;
 }
+
+// Re-export admin types
+export * from "./admin";

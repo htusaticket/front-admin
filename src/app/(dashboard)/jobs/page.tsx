@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState } from "react";
 import {
   Briefcase,
   DollarSign,
@@ -13,6 +12,8 @@ import {
   CheckCircle,
   Upload,
 } from "lucide-react";
+import { useState } from "react";
+
 import { UploadJobsModal } from "@/components/jobs/UploadJobsModal";
 // Mock data
 const jobOffers = [
@@ -225,7 +226,7 @@ export default function JobsPage() {
                   </p>
                 </div>
                 <button className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-200 transition-colors">
-                    <ExternalLink className="h-4 w-4" />
+                  <ExternalLink className="h-4 w-4" />
                     View Public Page
                 </button>
               </div>

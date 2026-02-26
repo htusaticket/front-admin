@@ -1,66 +1,85 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Play, Pause, AlertCircle, CheckCircle2 } from "lucide-react";
+import { X, Send, Play, Pause, ThumbsUp, AlertTriangle, Loader2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
-interface Submission {
-    id: number;
-    studentName: string;
-    studentAvatar?: string;
-    challengeTitle: string;
-    challengeDescription: string;
-    submittedAt: string;
-    audioUrl?: string; // Mock URL for now
-    status: 'Pending' | 'Reviewed';
-}
+import { useSubmissionsStore } from "@/store/submissions";
+import type { AdminSubmission } from "@/types/admin";
 
 interface ReviewSubmissionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  submission: Submission | null;
-  onSubmitFeedback: (id: number, feedback: string) => void;
+  submission: AdminSubmission | null;
 }
 
-export function ReviewSubmissionModal({ isOpen, onClose, submission, onSubmitFeedback }: ReviewSubmissionModalProps) {
+export function ReviewSubmissionModal({ isOpen, onClose, submission }: ReviewSubmissionModalProps) {
+  const { reviewSubmission, isLoading } = useSubmissionsStore();
+  
   const [feedback, setFeedback] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState<"APPROVED" | "NEEDS_IMPROVEMENT" | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Reset state when submission changes
+  // Reset state when submission changes - this is a valid use case for setState in effect
   useEffect(() => {
     if (submission) {
-        setFeedback("");
-        setIsPlaying(false);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFeedback("");
+       
+      setSelectedStatus(null);
+       
+      setIsPlaying(false);
+       
+      setError(null);
     }
   }, [submission]);
 
   const togglePlay = () => {
     if (audioRef.current) {
-        if (isPlaying) {
-            audioRef.current.pause();
-        } else {
-            audioRef.current.play();
-        }
-        setIsPlaying(!isPlaying);
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!submission) return;
+    if (!submission || !selectedStatus) return;
     
-    onSubmitFeedback(submission.id, feedback);
+    setError(null);
+
+    const result = await reviewSubmission(submission.id, {
+      status: selectedStatus,
+      feedback: feedback.trim() || "",
+    });
+
+    if (result.success) {
+      onClose();
+    } else {
+      setError(result.message || "Error submitting review");
+    }
+  };
+
+  const handleClose = () => {
+    setError(null);
     onClose();
   };
 
   if (!submission) return null;
 
+  const studentName = submission.studentName;
+  const studentInitial = submission.studentName?.charAt(0) || "?";
+
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={handleClose} />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -70,98 +89,167 @@ export function ReviewSubmissionModal({ isOpen, onClose, submission, onSubmitFee
             >
               <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-                        {submission.studentAvatar ? (
-                           <img src={submission.studentAvatar} alt={submission.studentName} className="h-full w-full object-cover"/>
-                        ) : (
-                           <span className="font-bold text-gray-400">{submission.studentName.charAt(0)}</span>
-                        )}
-                    </div>
-                    <div>
-                        <h2 className="font-display text-lg font-bold text-gray-900">{submission.studentName}</h2>
-                        <p className="text-xs text-gray-500">Submitted {submission.submittedAt}</p>
-                    </div>
+                  <div className="h-10 w-10 rounded-full bg-brand-primary/10 flex items-center justify-center overflow-hidden">
+                    <span className="font-bold text-brand-primary">{studentInitial}</span>
+                  </div>
+                  <div>
+                    <h2 className="font-display text-lg font-bold text-gray-900">{studentName}</h2>
+                    <p className="text-xs text-gray-500">
+                          Submitted {new Date(submission.submittedAt).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
-                <button onClick={onClose} className="rounded-full p-2 hover:bg-gray-100">
+                <button onClick={handleClose} className="rounded-full p-2 hover:bg-gray-100">
                   <X className="h-5 w-5" />
                 </button>
               </div>
 
+              {error && (
+                <div className="mx-6 mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
               <div className="p-6 space-y-6">
-                 {/* Challenge Context */}
-                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Challenge</h3>
-                    <p className="font-bold text-gray-900">{submission.challengeTitle}</p>
-                    <p className="text-sm text-gray-600 mt-1">{submission.challengeDescription}</p>
-                 </div>
+                {/* Challenge Context */}
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Challenge</h3>
+                  <p className="font-bold text-gray-900">{submission.challengeTitle}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${
+                      submission.challengeType === "AUDIO" 
+                        ? "bg-purple-100 text-purple-700" 
+                        : "bg-blue-100 text-blue-700"
+                    }`}>
+                      {submission.challengeType}
+                    </span>
+                  </div>
+                </div>
 
-                 {/* Audio Player */}
-                 <div className="flex flex-col items-center justify-center py-4 space-y-3">
-                     <div className="relative">
-                         {/* Visualizer Placeholder */}
-                         <div className="flex items-center gap-1 h-8">
-                             {[...Array(20)].map((_, i) => (
-                                 <motion.div 
-                                    key={i}
-                                    animate={{ height: isPlaying ? [10, 24, 8, 16, 10] : 8 }}
-                                    transition={{ 
-                                        duration: 0.5, 
-                                        repeat: Infinity, 
-                                        repeatType: "reverse",
-                                        delay: i * 0.05 
-                                    }}
-                                    className={`w-1 rounded-full ${isPlaying ? 'bg-brand-primary' : 'bg-gray-300'}`}
-                                 />
-                             ))}
-                         </div>
-                     </div>
-                     
-                     <audio 
-                       ref={audioRef} 
-                       src={submission.audioUrl || "https://www2.cs.uic.edu/~i101/SoundFiles/BabyElephantWalk60.wav"} 
-                       onEnded={() => setIsPlaying(false)}
-                       className="hidden"
-                     />
-                     
-                     <button 
-                       onClick={togglePlay}
-                       className="flex items-center gap-2 px-6 py-2 bg-brand-primary text-white rounded-full font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20"
-                     >
-                        {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                        {isPlaying ? "Pause Audio" : "Play Submission"}
-                     </button>
-                 </div>
-
-                 {/* Feedback Form */}
-                 <form onSubmit={handleSubmit} className="space-y-4 pt-4 border-t border-gray-100">
-                    <div>
-                        <label className="block text-sm font-bold text-gray-900 mb-2">
-                           Your Feedback
-                        </label>
-                        <textarea 
-                           required
-                           rows={4}
-                           className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all"
-                           placeholder="Write your constructive feedback here..."
-                           value={feedback}
-                           onChange={(e) => setFeedback(e.target.value)}
-                        />
+                {/* Audio Player (for audio submissions) */}
+                {submission.challengeType === "AUDIO" && submission.fileUrl && (
+                  <div className="flex flex-col items-center justify-center py-4 space-y-3">
+                    <div className="relative">
+                      {/* Visualizer Placeholder */}
+                      <div className="flex items-center gap-1 h-8">
+                        {[...Array(20)].map((_, i) => (
+                          <motion.div
+                            // eslint-disable-next-line react/no-array-index-key
+                            key={`visualizer-bar-${i}`}
+                            animate={{ height: isPlaying ? [10, 24, 8, 16, 10] : 8 }}
+                            transition={{ 
+                              duration: 0.5, 
+                              repeat: Infinity, 
+                              repeatType: "reverse",
+                              delay: i * 0.05, 
+                            }}
+                            className={`w-1 rounded-full ${isPlaying ? "bg-brand-primary" : "bg-gray-300"}`}
+                          />
+                        ))}
+                      </div>
                     </div>
+                       
+                    <audio 
+                      ref={audioRef} 
+                      src={submission.fileUrl} 
+                      onEnded={() => setIsPlaying(false)}
+                      className="hidden"
+                    />
+                       
+                    <button 
+                      onClick={togglePlay}
+                      className="flex items-center gap-2 px-6 py-2 bg-brand-primary text-white rounded-full font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20"
+                    >
+                      {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                      {isPlaying ? "Pause Audio" : "Play Submission"}
+                    </button>
+                  </div>
+                )}
+
+                {/* Quiz submission - no preview needed */}
+                {submission.challengeType === "QUIZ" && (
+                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Quiz Submission</h3>
+                    <p className="text-sm text-gray-600">This is a quiz challenge submission. Review the student&apos;s answers.</p>
+                  </div>
+                )}
+
+                {/* Review Form */}
+                <form onSubmit={handleSubmit} className="space-y-4 pt-4 border-t border-gray-100">
+                  {/* Status Selection */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-900 mb-3">
+                        Review Decision
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStatus("APPROVED")}
+                        className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                          selectedStatus === "APPROVED"
+                            ? "border-green-500 bg-green-50 text-green-700"
+                            : "border-gray-200 hover:border-green-200 text-gray-600"
+                        }`}
+                      >
+                        <ThumbsUp className="h-5 w-5" />
+                        <span className="font-bold">Approve</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStatus("NEEDS_IMPROVEMENT")}
+                        className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                          selectedStatus === "NEEDS_IMPROVEMENT"
+                            ? "border-amber-500 bg-amber-50 text-amber-700"
+                            : "border-gray-200 hover:border-amber-200 text-gray-600"
+                        }`}
+                      >
+                        <AlertTriangle className="h-5 w-5" />
+                        <span className="font-bold">Needs Work</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-900 mb-2">
+                           Feedback {selectedStatus === "NEEDS_IMPROVEMENT" && <span className="text-red-500">*</span>}
+                    </label>
+                    <textarea 
+                      required={selectedStatus === "NEEDS_IMPROVEMENT"}
+                      rows={4}
+                      className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all"
+                      placeholder="Write your constructive feedback here..."
+                      value={feedback}
+                      onChange={(e) => setFeedback(e.target.value)}
+                    />
+                    {selectedStatus === "NEEDS_IMPROVEMENT" && (
+                      <p className="text-xs text-gray-500 mt-1">
+                            Feedback is required when requesting improvements
+                      </p>
+                    )}
+                  </div>
                     
-                    <div className="flex justify-end gap-3">
-                        <button type="button" onClick={onClose} className="rounded-xl px-4 py-2 font-semibold text-gray-600 hover:bg-gray-200">
+                  <div className="flex justify-end gap-3">
+                    <button 
+                      type="button" 
+                      onClick={handleClose} 
+                      className="rounded-xl px-4 py-2 font-semibold text-gray-600 hover:bg-gray-200"
+                    >
                           Cancel
-                        </button>
-                        <button 
-                          type="submit" 
-                          disabled={!feedback.trim()}
-                          className="flex items-center gap-2 rounded-xl bg-green-600 px-6 py-2 font-bold text-white transition-all hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Send className="h-4 w-4" />
-                          Send Feedback
-                        </button>
-                    </div>
-                 </form>
+                    </button>
+                    <button 
+                      type="submit" 
+                      disabled={!selectedStatus || isLoading || (selectedStatus === "NEEDS_IMPROVEMENT" && !feedback.trim())}
+                      className="flex items-center gap-2 rounded-xl bg-green-600 px-6 py-2 font-bold text-white transition-all hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                          Submit Review
+                    </button>
+                  </div>
+                </form>
               </div>
 
             </motion.div>

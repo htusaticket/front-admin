@@ -99,8 +99,8 @@ export default function AcademyPage() {
   };
 
   const handleSuggest = (module: Module) => {
-      setSuggestingModule(module);
-      setIsSuggestOpen(true);
+    setSuggestingModule(module);
+    setIsSuggestOpen(true);
   };
 
   return (
@@ -133,6 +133,7 @@ export default function AcademyPage() {
             className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:shadow-lg"
           >
             <div className="relative h-48 w-full overflow-hidden bg-gray-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={module.image}
                 alt={module.title}
@@ -140,13 +141,13 @@ export default function AcademyPage() {
               />
               <div className="absolute inset-0 bg-black/10 transition-colors group-hover:bg-black/0" />
               <div className="absolute top-4 right-4 flex gap-2">
-                  <button 
-                    onClick={() => handleSuggest(module)}
-                    className="rounded-lg bg-white/90 p-2 text-gray-700 shadow-sm hover:text-brand-primary"
-                    title="Suggest to Student"
-                  >
-                     <Send className="h-4 w-4" />
-                  </button>
+                <button 
+                  onClick={() => handleSuggest(module)}
+                  className="rounded-lg bg-white/90 p-2 text-gray-700 shadow-sm hover:text-brand-primary"
+                  title="Suggest to Student"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
               </div>
             </div>
 
@@ -166,8 +167,8 @@ export default function AcademyPage() {
 
               <div className="mt-6 flex items-center gap-3 pt-4 border-t border-gray-100">
                 <button
-                    onClick={() => handleEditModule(module)}
-                    className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:border-brand-primary hover:text-brand-primary transition-colors"
+                  onClick={() => handleEditModule(module)}
+                  className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:border-brand-primary hover:text-brand-primary transition-colors"
                 >
                   Edit Content
                 </button>

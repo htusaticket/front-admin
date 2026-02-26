@@ -1,15 +1,21 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, Calendar, Video, Users, UploadCloud, FileText, Trash2 } from "lucide-react";
+import { X, Check, Calendar, Video, Users, UploadCloud, FileText, Trash2, Loader2 } from "lucide-react";
 import { useState, useRef } from "react";
+
+import { useClassesStore } from "@/store/classes";
 
 interface AddClassModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+type ClassType = "REGULAR" | "WORKSHOP";
+
 export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
+  const { createClass, isLoading } = useClassesStore();
+  
   const [formData, setFormData] = useState({
     title: "",
     date: "",
@@ -19,10 +25,11 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
     maxCapacity: 15,
     isUnlimited: false,
     hasStrike: true,
-    type: "regular",
+    type: "REGULAR" as ClassType,
   });
   
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [formError, setFormError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -35,10 +42,46 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
     setAttachedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Connect to API including attachedFiles
-    console.log("Submitting class with files:", attachedFiles);
+    setFormError(null);
+
+    // Combine date and time into ISO datetime
+    const startTime = new Date(`${formData.date}T${formData.startTime}`).toISOString();
+    const endTime = new Date(`${formData.date}T${formData.endTime}`).toISOString();
+
+    const result = await createClass({
+      title: formData.title,
+      type: formData.type,
+      startTime,
+      endTime,
+      meetLink: formData.meetLink || undefined,
+      capacityMax: formData.isUnlimited ? undefined : formData.maxCapacity,
+      description: "",
+    });
+
+    if (result.success) {
+      // Reset form
+      setFormData({
+        title: "",
+        date: "",
+        startTime: "",
+        endTime: "",
+        meetLink: "",
+        maxCapacity: 15,
+        isUnlimited: false,
+        hasStrike: true,
+        type: "REGULAR",
+      });
+      setAttachedFiles([]);
+      onClose();
+    } else {
+      setFormError(result.message || "Error creating class");
+    }
+  };
+
+  const handleClose = () => {
+    setFormError(null);
     onClose();
   };
 
@@ -51,7 +94,7 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={handleClose}
             className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
           />
 
@@ -74,12 +117,18 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
                   </h2>
                 </div>
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="rounded-full p-2 text-gray-500 hover:bg-gray-100 transition-colors"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
+
+              {formError && (
+                <div className="mx-6 mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {formError}
+                </div>
+              )}
 
               {/* Form Content */}
               <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden">
@@ -122,12 +171,12 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
                       <select
                         value={formData.type}
                         onChange={(e) =>
-                          setFormData({ ...formData, type: e.target.value })
+                          setFormData({ ...formData, type: e.target.value as ClassType })
                         }
                         className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20 bg-white"
                       >
-                        <option value="regular">Regular Class</option>
-                        <option value="workshop">Workshop</option>
+                        <option value="REGULAR">Regular Class</option>
+                        <option value="WORKSHOP">Workshop</option>
                       </select>
                     </div>
                   </div>
@@ -240,70 +289,75 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
                   </div>
                   
                   {/* File Upload Section */}
-                   <div>
+                  <div>
                     <label className="mb-1.5 block text-sm font-semibold text-gray-700">
                         Class Materials (Optional)
                     </label>
                     <div 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="cursor-pointer rounded-xl border-2 border-dashed border-gray-200 p-4 transition-all hover:border-brand-primary hover:bg-brand-primary/5 text-center group"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="cursor-pointer rounded-xl border-2 border-dashed border-gray-200 p-4 transition-all hover:border-brand-primary hover:bg-brand-primary/5 text-center group"
                     >
-                        <input 
-                            type="file" 
-                            multiple 
-                            className="hidden" 
-                            ref={fileInputRef} 
-                            onChange={handleFileChange}
-                        />
-                        <div className="flex flex-col items-center justify-center gap-1">
-                            <div className="p-2 bg-gray-50 rounded-full group-hover:bg-white transition-colors">
-                                <UploadCloud className="h-5 w-5 text-gray-400 group-hover:text-brand-primary transition-colors" />
-                            </div>
-                            <p className="text-sm font-medium text-gray-600">Click to upload documents</p>
-                            <p className="text-xs text-gray-400">PDF, DOCX, PPTX supported</p>
+                      <input 
+                        type="file" 
+                        multiple 
+                        className="hidden" 
+                        ref={fileInputRef} 
+                        onChange={handleFileChange}
+                      />
+                      <div className="flex flex-col items-center justify-center gap-1">
+                        <div className="p-2 bg-gray-50 rounded-full group-hover:bg-white transition-colors">
+                          <UploadCloud className="h-5 w-5 text-gray-400 group-hover:text-brand-primary transition-colors" />
                         </div>
+                        <p className="text-sm font-medium text-gray-600">Click to upload documents</p>
+                        <p className="text-xs text-gray-400">PDF, DOCX, PPTX supported</p>
+                      </div>
                     </div>
 
                     {/* File List */}
                     {attachedFiles.length > 0 && (
-                        <div className="mt-3 space-y-2">
-                            {attachedFiles.map((file, index) => (
-                                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
-                                    <div className="flex items-center gap-2 overflow-hidden">
-                                        <FileText className="h-4 w-4 text-brand-primary flex-none" />
-                                        <span className="text-sm text-gray-700 truncate">{file.name}</span>
-                                        <span className="text-xs text-gray-400 flex-none">
+                      <div className="mt-3 space-y-2">
+                        {attachedFiles.map((file, fileIndex) => (
+                          <div key={file.name} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <FileText className="h-4 w-4 text-brand-primary flex-none" />
+                              <span className="text-sm text-gray-700 truncate">{file.name}</span>
+                              <span className="text-xs text-gray-400 flex-none">
                                             ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                                        </span>
-                                    </div>
-                                    <button 
-                                        type="button"
-                                        onClick={() => removeFile(index)}
-                                        className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg transition-colors"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
+                              </span>
+                            </div>
+                            <button 
+                              type="button"
+                              onClick={() => removeFile(fileIndex)}
+                              className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     )}
-                   </div>
+                  </div>
                 </div>
 
                 {/* Footer */}
                 <div className="flex flex-none items-center justify-end gap-3 bg-white px-6 py-4">
                   <button
                     type="button"
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex items-center gap-2 rounded-xl bg-brand-primary px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary/90"
+                    disabled={isLoading}
+                    className="flex items-center gap-2 rounded-xl bg-brand-primary px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary/90 disabled:opacity-50"
                   >
-                    <Check className="h-4 w-4" />
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4" />
+                    )}
                     Schedule Class
                   </button>
                 </div>

@@ -298,6 +298,7 @@ export default function Register() {
               <div className="flex h-1 gap-1">
                 {[...Array(4)].map((_, i) => (
                   <div
+                    // eslint-disable-next-line react/no-array-index-key
                     key={`strength-bar-${i}`}
                     className={`flex-1 rounded-full transition-all duration-300 ${
                       i < passwordStrength.strength

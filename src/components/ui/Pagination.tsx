@@ -13,7 +13,7 @@ export function Pagination({
   totalPages, 
   onPageChange,
   itemsPerPage,
-  totalItems 
+  totalItems, 
 }: PaginationProps) {
   
   const getPageNumbers = () => {
@@ -23,14 +23,14 @@ export function Pagination({
     // Let's implement a simple version that shows up to 5 pages.
     
     let startPage = Math.max(1, currentPage - 2);
-    let endPage = Math.min(totalPages, startPage + 4);
+    const endPage = Math.min(totalPages, startPage + 4);
     
     if (endPage - startPage < 4) {
       startPage = Math.max(1, endPage - 4);
     }
 
     for (let i = startPage; i <= endPage; i++) {
-        pages.push(i);
+      pages.push(i);
     }
     return pages;
   };
@@ -58,9 +58,9 @@ export function Pagination({
       <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
         <div>
           {totalItems !== undefined && itemsPerPage !== undefined && (
-             <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700">
                 Showing <span className="font-medium">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span> to <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalItems)}</span> of <span className="font-medium">{totalItems}</span> results
-             </p>
+            </p>
           )}
         </div>
         <div>
@@ -75,17 +75,17 @@ export function Pagination({
             </button>
             
             {getPageNumbers().map(page => (
-                <button
-                    key={page}
-                    onClick={() => onPageChange(page)}
-                    className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
-                        page === currentPage 
-                        ? 'z-10 bg-brand-primary text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary' 
-                        : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0'
-                    }`}
-                >
-                    {page}
-                </button>
+              <button
+                key={page}
+                onClick={() => onPageChange(page)}
+                className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                  page === currentPage 
+                    ? "z-10 bg-brand-primary text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary" 
+                    : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                }`}
+              >
+                {page}
+              </button>
             ))}
 
             <button
