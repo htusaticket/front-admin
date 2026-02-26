@@ -1,8 +1,11 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check } from "lucide-react";
+import { X, Check, Loader2 } from "lucide-react";
 import { useState } from "react";
+
+import { useUsersStore } from "@/store/users";
+import type { UserRole, UserPlan } from "@/types/admin";
 
 interface AddUserModalProps {
   isOpen: boolean;
@@ -10,18 +13,58 @@ interface AddUserModalProps {
 }
 
 export function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
+  const { createUser, isLoading } = useUsersStore();
+  
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
-    password: "", // New field
-    phone: "",    // New field
-    role: "student",
-    status: "active",
+    password: "",
+    phone: "",
+    role: "USER" as UserRole,
+    plan: "" as UserPlan | "",
+    startDate: "",
+    endDate: "",
   });
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Connect to API
+    setFormError(null);
+
+    const result = await createUser({
+      email: formData.email,
+      password: formData.password,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      phone: formData.phone || undefined,
+      role: formData.role,
+      plan: formData.plan || undefined,
+      startDate: formData.startDate || undefined,
+      endDate: formData.endDate || undefined,
+    });
+
+    if (result.success) {
+      // Reset form
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        password: "",
+        phone: "",
+        role: "USER",
+        plan: "",
+        startDate: "",
+        endDate: "",
+      });
+      onClose();
+    } else {
+      setFormError(result.message || "Error creating user");
+    }
+  };
+
+  const handleClose = () => {
+    setFormError(null);
     onClose();
   };
 
@@ -34,7 +77,7 @@ export function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={handleClose}
             className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
           />
 
@@ -44,35 +87,58 @@ export function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl"
+              className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col"
             >
               <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
                 <h2 className="font-display text-lg font-bold text-gray-900">
                   Add New User
                 </h2>
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="rounded-full p-2 text-gray-500 hover:bg-gray-100 transition-colors"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. John Doe"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
-                  />
+              {formError && (
+                <div className="mx-6 mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {formError}
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="John"
+                      value={formData.firstName}
+                      onChange={(e) =>
+                        setFormData({ ...formData, firstName: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Doe"
+                      value={formData.lastName}
+                      onChange={(e) =>
+                        setFormData({ ...formData, lastName: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -132,44 +198,85 @@ export function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
                     <select
                       value={formData.role}
                       onChange={(e) =>
-                        setFormData({ ...formData, role: e.target.value })
+                        setFormData({ ...formData, role: e.target.value as UserRole })
                       }
                       className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20 bg-white"
                     >
-                      <option value="student">Student</option>
-                      <option value="admin">Admin</option>
+                      <option value="USER">Student</option>
+                      <option value="ADMIN">Admin</option>
+                      <option value="JOB_UPLOADER">Job Uploader</option>
                     </select>
                   </div>
                   <div>
                     <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                      Initial Status
+                      Plan
                     </label>
                     <select
-                      value={formData.status}
+                      value={formData.plan}
                       onChange={(e) =>
-                        setFormData({ ...formData, status: e.target.value })
+                        setFormData({ ...formData, plan: e.target.value as UserPlan | "" })
                       }
                       className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20 bg-white"
                     >
-                      <option value="active">Active</option>
-                      <option value="pending">Pending</option>
+                      <option value="">No Plan</option>
+                      <option value="PRO">PRO</option>
+                      <option value="ELITE">ELITE</option>
+                      <option value="LEVEL_UP">LEVEL UP</option>
+                      <option value="HIRING_HUB">HIRING HUB</option>
+                      <option value="SKILL_BUILDER">SKILL BUILDER</option>
                     </select>
                   </div>
                 </div>
 
+                {formData.plan && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                        Start Date
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.startDate}
+                        onChange={(e) =>
+                          setFormData({ ...formData, startDate: e.target.value })
+                        }
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                        End Date
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.endDate}
+                        onChange={(e) =>
+                          setFormData({ ...formData, endDate: e.target.value })
+                        }
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-end gap-3 pt-4">
                   <button
                     type="button"
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex items-center gap-2 rounded-xl bg-brand-primary px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary/90"
+                    disabled={isLoading}
+                    className="flex items-center gap-2 rounded-xl bg-brand-primary px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary/90 disabled:opacity-50"
                   >
-                    <Check className="h-4 w-4" />
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4" />
+                    )}
                     Create User
                   </button>
                 </div>

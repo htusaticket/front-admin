@@ -112,9 +112,9 @@ export default function LessonPage({
           </h2>
         </div>
         <div className="space-y-3">
-          {lesson.resources.map((resource, index) => (
+          {lesson.resources.map((resource) => (
             <div
-              key={index}
+              key={resource.name}
               className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 p-4 transition-all hover:border-brand-cyan-dark hover:bg-white"
             >
               <div className="flex items-center gap-3">

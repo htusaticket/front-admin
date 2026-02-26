@@ -1,69 +1,73 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CheckCircle2, Mic, Calendar, User, Search, Filter, MessageSquare } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle2, Calendar, User, Search, MessageSquare, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+
 import { ReviewSubmissionModal } from "@/components/corrections/ReviewSubmissionModal";
+import { useSubmissionsStore } from "@/store/submissions";
+import type { AdminSubmission, SubmissionStatus } from "@/types/admin";
 
-interface Submission {
-    id: number;
-    studentName: string;
-    challengeTitle: string;
-    challengeDescription: string;
-    submittedAt: string;
-    status: 'Pending' | 'Reviewed';
-    audioUrl?: string; 
-}
+const formatDate = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  return date.toLocaleString("en-US", { 
+    month: "short", 
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
 
-// Mock Data
-const MOCK_SUBMISSIONS: Submission[] = [
-  {
-    id: 1,
-    studentName: "John Doe",
-    challengeTitle: "Listen to Podcast #4",
-    challengeDescription: "Listen to the daily audio and summarize the key takeaways.",
-    submittedAt: "2024-02-15 10:30 AM",
-    status: "Pending"
-  },
-  {
-    id: 2,
-    studentName: "Jane Smith",
-    challengeTitle: "Elevator Pitch Practice",
-    challengeDescription: "Record a 30-second elevator pitch for the new product.",
-    submittedAt: "2024-02-15 11:15 AM",
-    status: "Pending"
-  },
-  {
-    id: 3,
-    studentName: "Mike Johnson",
-    challengeTitle: "Objection Handling",
-    challengeDescription: "Respond to the 'It's too expensive' objection.",
-    submittedAt: "2024-02-14 02:45 PM",
-    status: "Reviewed"
-  }
-];
+const getAvatarColor = (name: string): string => {
+  const colors = [
+    "bg-red-50 text-red-600",
+    "bg-orange-50 text-orange-600",
+    "bg-amber-50 text-amber-600",
+    "bg-green-50 text-green-600",
+    "bg-teal-50 text-teal-600",
+    "bg-blue-50 text-blue-600",
+    "bg-indigo-50 text-indigo-600",
+    "bg-purple-50 text-purple-600",
+  ];
+  const charCode = name.charCodeAt(0) || 0;
+  return colors[charCode % colors.length];
+};
 
 export default function CorrectionsPage() {
-  const [activeTab, setActiveTab] = useState<'Pending' | 'Reviewed'>('Pending');
-  const [submissions, setSubmissions] = useState<Submission[]>(MOCK_SUBMISSIONS);
-  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const { 
+    submissions, 
+    isLoading, 
+    error,
+    fetchSubmissions, 
+  } = useSubmissionsStore();
+
+  const [activeTab, setActiveTab] = useState<SubmissionStatus | "ALL">("PENDING");
+  const [selectedSubmission, setSelectedSubmission] = useState<AdminSubmission | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredSubmissions = submissions.filter(s => s.status === activeTab);
+  useEffect(() => {
+    fetchSubmissions({ 
+      limit: 50,
+      status: activeTab !== "ALL" ? activeTab : undefined, 
+    });
+  }, [fetchSubmissions, activeTab]);
 
-  const handleReviewClick = (submission: Submission) => {
-      setSelectedSubmission(submission);
-      setIsReviewModalOpen(true);
+  const filteredSubmissions = submissions.filter(s => {
+    const matchesSearch = searchQuery 
+      ? s.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.challengeTitle.toLowerCase().includes(searchQuery.toLowerCase())
+      : true;
+    return matchesSearch;
+  });
+
+  const handleReviewClick = (submission: AdminSubmission) => {
+    setSelectedSubmission(submission);
+    setIsReviewModalOpen(true);
   };
 
-  const handleSubmitFeedback = (id: number, feedback: string) => {
-      console.log(`Submitting feedback for ${id}: ${feedback}`);
-      // Update mock state
-      setSubmissions(submissions.map(s => 
-          s.id === id ? { ...s, status: 'Reviewed' } : s
-      ));
-      setIsReviewModalOpen(false);
-  };
+  const pendingCount = submissions.filter(s => s.status === "PENDING").length;
 
   return (
     <div className="space-y-8">
@@ -79,112 +83,143 @@ export default function CorrectionsPage() {
         </div>
       </div>
 
+      {/* Error */}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+          {error}
+        </div>
+      )}
+
       {/* Tabs & Filters */}
       <div className="flex items-center justify-between border-b border-gray-200">
-          <div className="flex gap-6">
-              <button 
-                onClick={() => setActiveTab('Pending')}
-                className={`pb-4 text-sm font-bold transition-all relative ${
-                    activeTab === 'Pending' ? 'text-brand-primary' : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                  Pending Review
-                  {activeTab === 'Pending' && (
-                      <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-primary" />
-                  )}
-                  <span className="ml-2 bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
-                      {submissions.filter(s => s.status === 'Pending').length}
-                  </span>
-              </button>
-              <button 
-                onClick={() => setActiveTab('Reviewed')}
-                className={`pb-4 text-sm font-bold transition-all relative ${
-                    activeTab === 'Reviewed' ? 'text-brand-primary' : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                  History
-                  {activeTab === 'Reviewed' && (
-                      <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-primary" />
-                  )}
-              </button>
-          </div>
+        <div className="flex gap-6">
+          <button 
+            onClick={() => setActiveTab("PENDING")}
+            className={`pb-4 text-sm font-bold transition-all relative ${
+              activeTab === "PENDING" ? "text-brand-primary" : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Pending Review
+            {activeTab === "PENDING" && (
+              <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-primary" />
+            )}
+            <span className="ml-2 bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-xs">
+              {pendingCount}
+            </span>
+          </button>
+          <button 
+            onClick={() => setActiveTab("APPROVED")}
+            className={`pb-4 text-sm font-bold transition-all relative ${
+              activeTab === "APPROVED" ? "text-brand-primary" : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Approved
+            {activeTab === "APPROVED" && (
+              <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-primary" />
+            )}
+          </button>
+          <button 
+            onClick={() => setActiveTab("NEEDS_IMPROVEMENT")}
+            className={`pb-4 text-sm font-bold transition-all relative ${
+              activeTab === "NEEDS_IMPROVEMENT" ? "text-brand-primary" : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Needs Improvement
+            {activeTab === "NEEDS_IMPROVEMENT" && (
+              <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-primary" />
+            )}
+          </button>
+        </div>
           
-          <div className="pb-2">
-              <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input 
-                    type="text" 
-                    placeholder="Search students..." 
-                    className="pl-9 pr-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:border-brand-primary w-64"
-                  />
-              </div>
+        <div className="pb-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input 
+              type="text" 
+              placeholder="Search students or challenges..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:border-brand-primary w-64"
+            />
           </div>
+        </div>
       </div>
 
       {/* List */}
-      <div className="grid gap-4">
+      {isLoading && submissions.length === 0 ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-brand-primary" />
+        </div>
+      ) : (
+        <div className="grid gap-4">
           {filteredSubmissions.length === 0 ? (
-              <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                  <CheckCircle2 className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 font-medium">No {activeTab.toLowerCase()} submissions found.</p>
-              </div>
+            <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+              <CheckCircle2 className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">
+                {activeTab === "PENDING" 
+                  ? "No pending submissions to review." 
+                  : `No ${activeTab.toLowerCase().replace("_", " ")} submissions found.`}
+              </p>
+            </div>
           ) : (
-              filteredSubmissions.map((submission) => (
-                  <motion.div 
-                    key={submission.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center justify-between bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all"
-                  >
-                      <div className="flex items-center gap-6">
-                          {/* Avatar Initials */}
-                          <div className="h-12 w-12 rounded-full bg-blue-50 text-blue-600 font-bold text-lg flex items-center justify-center">
-                              {submission.studentName.charAt(0)}
-                          </div>
-                          
-                          <div className="space-y-1">
-                              <h3 className="font-bold text-gray-900">{submission.challengeTitle}</h3>
-                              <div className="flex items-center gap-2 text-sm text-gray-500">
-                                  <User className="h-3.5 w-3.5" />
-                                  <span>{submission.studentName}</span>
-                                  <span className="text-gray-300">•</span>
-                                  <Calendar className="h-3.5 w-3.5" />
-                                  <span>{submission.submittedAt}</span>
-                              </div>
-                          </div>
-                      </div>
+            filteredSubmissions.map((submission) => (
+              <motion.div 
+                key={submission.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center justify-between bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all"
+              >
+                <div className="flex items-center gap-6">
+                  {/* Avatar */}
+                  <div className={`h-12 w-12 rounded-full font-bold text-lg flex items-center justify-center ${getAvatarColor(submission.studentName)}`}>
+                    {submission.studentName.charAt(0)}
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <h3 className="font-bold text-gray-900">{submission.challengeTitle}</h3>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <User className="h-3.5 w-3.5" />
+                      <span>{submission.studentName}</span>
+                      <span className="text-gray-300">•</span>
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span>{formatDate(submission.submittedAt)}</span>
+                    </div>
+                  </div>
+                </div>
 
-                      <div className="flex items-center gap-4">
-                           <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-100">
-                               <Mic className="h-4 w-4 text-purple-500" />
-                               <span className="text-xs font-semibold text-gray-600">Audio Submission</span>
-                           </div>
-                           
-                           {submission.status === 'Pending' ? (
-                               <button 
-                                 onClick={() => handleReviewClick(submission)}
-                                 className="flex items-center gap-2 px-6 py-2.5 bg-brand-primary text-white rounded-xl font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20"
-                               >
-                                   <MessageSquare className="h-4 w-4" />
-                                   Review
-                               </button>
-                           ) : (
-                               <span className="flex items-center gap-2 px-4 py-2 text-green-600 font-bold bg-green-50 rounded-xl border border-green-100">
-                                   <CheckCircle2 className="h-4 w-4" />
-                                   Reviewed
-                               </span>
-                           )}
-                      </div>
-                  </motion.div>
-              ))
+                <div className="flex items-center gap-4">
+                  {submission.status === "PENDING" ? (
+                    <button 
+                      onClick={() => handleReviewClick(submission)}
+                      className="flex items-center gap-2 px-6 py-2.5 bg-brand-primary text-white rounded-xl font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      Review
+                    </button>
+                  ) : (
+                    <span className={`flex items-center gap-2 px-4 py-2 font-bold rounded-xl border ${
+                      submission.status === "APPROVED"
+                        ? "text-green-600 bg-green-50 border-green-100"
+                        : "text-amber-600 bg-amber-50 border-amber-100"
+                    }`}>
+                      <CheckCircle2 className="h-4 w-4" />
+                      {submission.status === "APPROVED" ? "Approved" : "Needs Work"}
+                    </span>
+                  )}
+                </div>
+              </motion.div>
+            ))
           )}
-      </div>
+        </div>
+      )}
 
       <ReviewSubmissionModal
-         isOpen={isReviewModalOpen}
-         onClose={() => setIsReviewModalOpen(false)}
-         submission={selectedSubmission}
-         onSubmitFeedback={handleSubmitFeedback}
+        isOpen={isReviewModalOpen}
+        onClose={() => {
+          setIsReviewModalOpen(false);
+          setSelectedSubmission(null);
+        }}
+        submission={selectedSubmission}
       />
     </div>
   );

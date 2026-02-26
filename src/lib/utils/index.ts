@@ -11,7 +11,8 @@ export const formatDate = (date: Date | string, locale: string = "en-US"): strin
   }).format(dateObj);
 };
 
-export const debounce = <T extends (...args: unknown[]) => unknown>(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const debounce = <T extends (...args: any[]) => any>(
   func: T,
   wait: number,
 ): ((...args: Parameters<T>) => void) => {

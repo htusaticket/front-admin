@@ -25,7 +25,7 @@ interface ParsedJob {
 export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [parsedJobs, setParsedJobs] = useState<ParsedJob[]>([]);
-  const [parsing, setParsing] = useState(false);
+  const [_parsing, setParsing] = useState(false);
   const [error, setError] = useState("");
 
   const parseText = (text: string) => {
@@ -35,7 +35,7 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
       // We can split by that pattern to separate jobs, then parse lines.
       
       const jobs: ParsedJob[] = [];
-      const blocks = text.split(/Apply Here - CODE: \d+/i);
+      const _blocks = text.split(/Apply Here - CODE: \d+/i);
       
       // Get all codes to match back to blocks if needed, or just split regex keeping delimiters
       // Let's rely on a simpler block split by double newline chunks and keywords.
@@ -51,7 +51,7 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
         const blockContent = match[1].trim();
         const code = match[2];
         
-        const lines = blockContent.split('\n').map(l => l.trim()).filter(l => l);
+        const lines = blockContent.split("\n").map(l => l.trim()).filter(l => l);
         
         if (lines.length === 0) continue;
 
@@ -60,7 +60,7 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
         
         // Helper to extract value by key
         const getValue = (key: string) => {
-          const line = lines.find(l => l.toLowerCase().startsWith(key.toLowerCase() + ":"));
+          const line = lines.find(l => l.toLowerCase().startsWith(`${key.toLowerCase()}:`));
           return line ? line.substring(key.length + 1).trim() : "";
         };
 
@@ -71,9 +71,9 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
           offer: getValue("Offer"),
           revenue: getValue("Revenue"),
           hiring: getValue("Hiring"),
-          ote: getValue("OTE") || getValue("Closer OTE") + " / " + getValue("Setter OTE"), // Handle composite
+          ote: getValue("OTE") || `${getValue("Closer OTE")} / ${getValue("Setter OTE")}`, // Handle composite
           notes: getValue("Notes"),
-          code: code
+          code: code,
         });
       }
 
@@ -102,7 +102,7 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
           const result = await mammoth.extractRawText({ arrayBuffer });
           text = result.value;
           if (result.messages.length > 0) {
-            console.log("Mammoth messages:", result.messages);
+            console.warn("Mammoth messages:", result.messages);
           }
         } else {
           // Fallback for txt
@@ -121,7 +121,6 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
 
   const handleSubmit = () => {
     // TODO: Send parsedJobs to API
-    console.log("Uploading jobs:", parsedJobs);
     onClose();
   };
 
@@ -139,21 +138,21 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
             >
               {/* Header */}
               <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-                 <div className="flex items-center gap-2">
-                   <div className="p-2 bg-brand-primary/10 rounded-lg">
-                     <Upload className="h-5 w-5 text-brand-primary" />
-                   </div>
-                   <h2 className="font-display text-lg font-bold text-gray-900">Upload Job Offers</h2>
-                 </div>
-                 <button onClick={onClose} className="rounded-full p-2 hover:bg-gray-100"><X className="h-5 w-5" /></button>
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-brand-primary/10 rounded-lg">
+                    <Upload className="h-5 w-5 text-brand-primary" />
+                  </div>
+                  <h2 className="font-display text-lg font-bold text-gray-900">Upload Job Offers</h2>
+                </div>
+                <button onClick={onClose} className="rounded-full p-2 hover:bg-gray-100"><X className="h-5 w-5" /></button>
               </div>
 
               {/* Content */}
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
                 {/* File Input */}
                 <div className={`relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-all ${
-                    file ? "border-brand-primary/30 bg-brand-primary/5" : "border-gray-200 hover:border-brand-primary/50 hover:bg-gray-50"
-                  }`}>
+                  file ? "border-brand-primary/30 bg-brand-primary/5" : "border-gray-200 hover:border-brand-primary/50 hover:bg-gray-50"
+                }`}>
                   <input 
                     type="file" 
                     accept=".txt,.doc,.docx" // Allowing txt for easy testing
@@ -190,21 +189,21 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
                           <h3 className="font-bold text-green-900">Analysis Complete</h3>
                           <p className="text-sm text-green-700">
                             Found <span className="font-bold">{parsedJobs.length}</span> valid job offers to upload.
-                           </p>
+                          </p>
                         </div>
                       </div>
                     </div>
 
                     <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2">
-                      {parsedJobs.map((job, idx) => (
-                        <div key={idx} className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm">
+                      {parsedJobs.map((job) => (
+                        <div key={job.code} className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm">
                           <div className="flex justify-between items-start mb-1">
-                             <span className="font-bold text-gray-900 line-clamp-1">{job.title}</span>
-                             <span className="font-mono text-xs bg-gray-200 px-2 py-0.5 rounded text-gray-600">#{job.code}</span>
+                            <span className="font-bold text-gray-900 line-clamp-1">{job.title}</span>
+                            <span className="font-mono text-xs bg-gray-200 px-2 py-0.5 rounded text-gray-600">#{job.code}</span>
                           </div>
                           <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
-                             <span>Role: {job.hiring}</span>
-                             <span>OTE: {job.ote}</span>
+                            <span>Role: {job.hiring}</span>
+                            <span>OTE: {job.ote}</span>
                           </div>
                         </div>
                       ))}

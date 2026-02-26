@@ -13,7 +13,7 @@ const MOCK_LOGS = Array.from({ length: 50 }, (_, i) => ({
   action: ["Created Challenge", "Deleted User", "Updated Settings", "Uploaded Jobs", "Reviewed Submission"][i % 5],
   target: ["Challenge #101", "User: John Doe", "System Config", "Job: Senior Dev", "Audio: Podcast"][i % 5],
   timestamp: new Date(Date.now() - i * 3600000).toLocaleString(),
-  type: ["Create", "Delete", "Update", "Upload", "Review"][i % 5]
+  type: ["Create", "Delete", "Update", "Upload", "Review"][i % 5],
 }));
 
 export default function AuditPage() {
@@ -25,7 +25,7 @@ export default function AuditPage() {
   const filteredLogs = MOCK_LOGS.filter(log =>
     log.adminName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.target.toLowerCase().includes(searchQuery.toLowerCase())
+    log.target.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
@@ -90,8 +90,8 @@ export default function AuditPage() {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${
                     log.type === "Delete" ? "bg-red-50 text-red-700 border border-red-100" :
-                    log.type === "Create" ? "bg-green-50 text-green-700 border border-green-100" :
-                    "bg-gray-50 text-gray-700 border border-gray-100"
+                      log.type === "Create" ? "bg-green-50 text-green-700 border border-green-100" :
+                        "bg-gray-50 text-gray-700 border border-gray-100"
                   }`}>
                     {log.type === "Delete" && <ShieldAlert className="h-3 w-3" />}
                     {log.action}

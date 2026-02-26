@@ -34,7 +34,7 @@ export const InputField = ({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition-all placeholder:text-gray-400 ${
+      className={`w-full rounded-xl border px-4 py-3 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 ${
         error
           ? "border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-100"
           : "border-gray-200 focus:border-brand-cyan-dark focus:ring-4 focus:ring-brand-cyan-dark/10 hover:border-brand-cyan-dark/50"
@@ -77,7 +77,7 @@ export const PasswordField = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="••••••••"
-        className={`w-full rounded-xl border px-4 py-3 pr-12 text-sm outline-none transition-all placeholder:text-gray-400 ${
+        className={`w-full rounded-xl border px-4 py-3 pr-12 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 ${
           error
             ? "border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-100"
             : "border-gray-200 focus:border-brand-cyan-dark focus:ring-4 focus:ring-brand-cyan-dark/10 hover:border-brand-cyan-dark/50"
