@@ -41,12 +41,14 @@ RUN adduser --system --uid 1001 nextjs
 # Install curl for healthcheck
 RUN apk add --no-cache curl
 
+# Set the correct permission for prerender cache
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
+
 # Automatically leverage output traces to reduce image size
+COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# Copy public folder if it exists
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 USER nextjs
 
