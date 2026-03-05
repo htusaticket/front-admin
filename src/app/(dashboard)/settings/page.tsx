@@ -1,24 +1,99 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Settings, Shield, ToggleLeft, ToggleRight, UserCog, AlertTriangle, ChevronRight, Users } from "lucide-react";
+import { 
+  Settings, 
+  Shield, 
+  ToggleLeft, 
+  ToggleRight, 
+  UserCog, 
+  AlertTriangle, 
+  ChevronRight, 
+  Users,
+  Loader2,
+  Save,
+} from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useAuthStore } from "@/store/auth";
+import { useSystemConfigStore } from "@/store/systemConfig";
 
 export default function SettingsPage() {
   const { user } = useAuthStore();
+  const { config, isLoading, isSaving, fetchConfig, updateConfig } = useSystemConfigStore();
   const isSuperAdmin = user?.role === "SUPERADMIN";
   
-  // Mock State for Settings
-  const [modules, setModules] = useState({
-    jobsParams: true,
-    academy: true,
+  // Local state for form values
+  const [formValues, setFormValues] = useState({
+    lateCancellationHours: 2,
+    maxStrikesForPunishment: 3,
+    punishmentDurationDays: 7,
   });
 
-  const toggleModule = (key: keyof typeof modules) => {
-    setModules(prev => ({ ...prev, [key]: !prev[key] }));
+  // Track if values have changed
+  const [hasChanges, setHasChanges] = useState(false);
+  
+  // Module visibility state
+  const [modules, setModules] = useState({
+    jobsModule: true,
+    academyModule: true,
+  });
+  const [modulesSaving, setModulesSaving] = useState(false);
+
+  // Fetch config on mount
+  useEffect(() => {
+    fetchConfig();
+  }, [fetchConfig]);
+
+  // Update form values when config loads
+  useEffect(() => {
+    if (config) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFormValues({
+        lateCancellationHours: config.lateCancellationHours,
+        maxStrikesForPunishment: config.maxStrikesForPunishment,
+        punishmentDurationDays: config.punishmentDurationDays,
+      });
+      setModules({
+        jobsModule: config.jobBoardEnabled,
+        academyModule: config.academyEnabled,
+      });
+    }
+  }, [config]);
+
+  // Check for changes
+  useEffect(() => {
+    if (config) {
+      const changed = 
+        formValues.lateCancellationHours !== config.lateCancellationHours ||
+        formValues.maxStrikesForPunishment !== config.maxStrikesForPunishment ||
+        formValues.punishmentDurationDays !== config.punishmentDurationDays;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHasChanges(changed);
+    }
+  }, [formValues, config]);
+
+  const handleInputChange = (field: keyof typeof formValues, value: number) => {
+    setFormValues(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSavePolicy = async () => {
+    await updateConfig(formValues);
+    setHasChanges(false);
+  };
+
+  const toggleModule = async (key: keyof typeof modules) => {
+    const newValue = !modules[key];
+    setModules(prev => ({ ...prev, [key]: newValue }));
+    setModulesSaving(true);
+    
+    const updateData = key === "jobsModule" 
+      ? { jobBoardEnabled: newValue }
+      : { academyEnabled: newValue };
+    
+    await updateConfig(updateData);
+    setModulesSaving(false);
   };
 
   return (
@@ -88,10 +163,11 @@ export default function SettingsPage() {
                 <p className="text-xs text-gray-500">Enable access to job opportunities</p>
               </div>
               <button 
-                onClick={() => toggleModule("jobsParams")}
-                className={`transition-colors ${modules.jobsParams ? "text-brand-primary" : "text-gray-300"}`}
+                onClick={() => toggleModule("jobsModule")}
+                disabled={modulesSaving}
+                className={`transition-colors disabled:opacity-50 ${modules.jobsModule ? "text-brand-primary" : "text-gray-300"}`}
               >
-                {modules.jobsParams ? <ToggleRight className="h-8 w-8" /> : <ToggleLeft className="h-8 w-8" />}
+                {modules.jobsModule ? <ToggleRight className="h-8 w-8" /> : <ToggleLeft className="h-8 w-8" />}
               </button>
             </div>
             <div className="flex items-center justify-between rounded-xl border border-gray-100 p-4">
@@ -100,10 +176,11 @@ export default function SettingsPage() {
                 <p className="text-xs text-gray-500">Enable learning materials</p>
               </div>
               <button 
-                onClick={() => toggleModule("academy")}
-                className={`transition-colors ${modules.academy ? "text-brand-primary" : "text-gray-300"}`}
+                onClick={() => toggleModule("academyModule")}
+                disabled={modulesSaving}
+                className={`transition-colors disabled:opacity-50 ${modules.academyModule ? "text-brand-primary" : "text-gray-300"}`}
               >
-                {modules.academy ? <ToggleRight className="h-8 w-8" /> : <ToggleLeft className="h-8 w-8" />}
+                {modules.academyModule ? <ToggleRight className="h-8 w-8" /> : <ToggleLeft className="h-8 w-8" />}
               </button>
             </div>
           </div>
@@ -172,57 +249,101 @@ export default function SettingsPage() {
             <AlertTriangle className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="font-display text-lg font-bold text-gray-900">Strike & Attendance Policy</h2>
+            <h2 className="font-display text-lg font-bold text-gray-900">Strike & Punishment Policy</h2>
             <p className="text-sm text-gray-500">Configure penalties for late cancellations and absences.</p>
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Late Cancellation Threshold</label>
-            <div className="relative">
-              <input 
-                type="number" 
-                defaultValue={24}
-                className="w-full rounded-xl border border-gray-200 p-3 pr-16 text-sm outline-none focus:border-brand-primary font-medium"
-              />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium">Hours</span>
-            </div>
-            <p className="mt-1.5 text-xs text-gray-500">Cancellations made less than this time before class count as a strike.</p>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-brand-primary" />
           </div>
+        ) : (
+          <>
+            <div className="grid gap-6 md:grid-cols-3">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Late Cancellation Threshold</label>
+                <div className="relative">
+                  <input 
+                    type="number" 
+                    value={formValues.lateCancellationHours}
+                    onChange={(e) => handleInputChange("lateCancellationHours", parseInt(e.target.value) || 0)}
+                    min={1}
+                    max={72}
+                    className="w-full rounded-xl border border-gray-200 p-3 pr-16 text-sm outline-none focus:border-brand-primary font-medium"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium">Hours</span>
+                </div>
+                <p className="mt-1.5 text-xs text-gray-500">Cancellations made less than this time before class count as a strike.</p>
+              </div>
 
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Strike Limit</label>
-            <div className="relative">
-              <input 
-                type="number" 
-                defaultValue={3}
-                className="w-full rounded-xl border border-gray-200 p-3 pr-16 text-sm outline-none focus:border-brand-primary font-medium"
-              />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium">Strikes</span>
-            </div>
-            <p className="mt-1.5 text-xs text-gray-500">Number of strikes before the penalty is applied.</p>
-          </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Strike Limit for Punishment</label>
+                <div className="relative">
+                  <input 
+                    type="number" 
+                    value={formValues.maxStrikesForPunishment}
+                    onChange={(e) => handleInputChange("maxStrikesForPunishment", parseInt(e.target.value) || 0)}
+                    min={1}
+                    max={10}
+                    className="w-full rounded-xl border border-gray-200 p-3 pr-16 text-sm outline-none focus:border-brand-primary font-medium"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium">Strikes</span>
+                </div>
+                <p className="mt-1.5 text-xs text-gray-500">Number of strikes before punishment is applied (blocks live classes).</p>
+              </div>
 
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Penalty Duration</label>
-            <div className="relative">
-              <input 
-                type="number" 
-                defaultValue={2}
-                className="w-full rounded-xl border border-gray-200 p-3 pr-20 text-sm outline-none focus:border-brand-primary font-medium"
-              />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium">Weeks</span>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Punishment Duration</label>
+                <div className="relative">
+                  <input 
+                    type="number" 
+                    value={formValues.punishmentDurationDays}
+                    onChange={(e) => handleInputChange("punishmentDurationDays", parseInt(e.target.value) || 0)}
+                    min={1}
+                    max={90}
+                    className="w-full rounded-xl border border-gray-200 p-3 pr-16 text-sm outline-none focus:border-brand-primary font-medium"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium">Days</span>
+                </div>
+                <p className="mt-1.5 text-xs text-gray-500">How long the user is blocked from booking live classes.</p>
+              </div>
             </div>
-            <p className="mt-1.5 text-xs text-gray-500">Time a student is suspended from booking after limit is reached.</p>
-          </div>
-        </div>
-        
-        <div className="mt-6 flex justify-end">
-          <button className="rounded-xl bg-brand-primary px-6 py-2 text-sm font-bold text-white hover:bg-brand-primary/90">
-                Save Policy
-          </button>
-        </div>
+
+            {/* Info box about punishment vs suspension */}
+            <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
+              <p className="text-sm text-blue-800">
+                <strong>Note:</strong> Punishment blocks access to live classes only. 
+                Users can still access Academy content and Job Board. 
+                For a full account ban, use the &quot;Suspend User&quot; action from the Users page.
+              </p>
+            </div>
+            
+            <div className="mt-6 flex justify-end">
+              <button 
+                onClick={handleSavePolicy}
+                disabled={!hasChanges || isSaving}
+                className={`flex items-center gap-2 rounded-xl px-6 py-2 text-sm font-bold text-white transition-colors ${
+                  hasChanges && !isSaving
+                    ? "bg-brand-primary hover:bg-brand-primary/90"
+                    : "bg-gray-300 cursor-not-allowed"
+                }`}
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Save Policy
+                  </>
+                )}
+              </button>
+            </div>
+          </>
+        )}
       </motion.div>
     </div>
   );

@@ -1,330 +1,503 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import {
   User,
   Mail,
   Phone,
   MapPin,
   Globe,
+  Shield,
   Calendar,
-  AlertTriangle,
-  Crown,
-  Edit,
+  Edit2,
   Save,
+  X,
+  Lock,
+  Loader2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, ChangeEvent } from "react";
+import { toast } from "sonner";
+
+import api from "@/lib/api";
+import { useAuthStore } from "@/store";
+
+interface ProfileData {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  city: string;
+  country: string;
+  avatar: string | null;
+  role: string;
+  status: string;
+  createdAt: string;
+}
+
+const roleLabels: Record<string, string> = {
+  SUPERADMIN: "Super Administrador",
+  ADMIN: "Administrador",
+  USER: "Usuario",
+};
 
 export default function ProfilePage() {
+  const { user, setUser } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<"personal" | "security">("personal");
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [formData, setFormData] = useState({
-    firstName: "Eugenia",
-    lastName: "Rodríguez",
-    email: "eugenia@example.com",
-    phone: "+54 11 1234-5678",
-    city: "Buenos Aires",
-    country: "Argentina",
+    firstName: "",
+    lastName: "",
+    phone: "",
+    city: "",
+    country: "",
+  });
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
-  const userStats = {
-    subscription: "High Ticket",
-    memberSince: "January 2026",
-    strikes: 1,
-    maxStrikes: 3,
-    strikeResetDate: "Feb 15, 2026",
-    completedClasses: 24,
-    completedLessons: 7,
-    challengesCompleted: 15,
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      // Usar el endpoint de admin profile
+      const response = await api.get<{ data: ProfileData }>("/api/admin/profile");
+      const data = response.data.data;
+      setProfileData(data);
+      setFormData({
+        firstName: data?.firstName || "",
+        lastName: data?.lastName || "",
+        phone: data?.phone || "",
+        city: data?.city || "",
+        country: data?.country || "",
+      });
+    } catch (error) {
+      toast.error("Error al cargar el perfil");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSave = () => {
+  const handleSaveProfile = async () => {
+    try {
+      setSaving(true);
+      const response = await api.put<{ data: ProfileData }>("/api/admin/profile", formData);
+      setProfileData(response.data.data);
+      setUser({
+        ...user!,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+      });
+      setIsEditing(false);
+      toast.success("Perfil actualizado correctamente");
+    } catch (error) {
+      toast.error("Error al actualizar el perfil");
+      console.error(error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error("Las contraseñas no coinciden");
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast.error("La nueva contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await api.put("/api/admin/profile/password", {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      toast.success("Contraseña actualizada correctamente");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || "Error al cambiar la contraseña");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    if (profileData) {
+      setFormData({
+        firstName: profileData.firstName || "",
+        lastName: profileData.lastName || "",
+        phone: profileData.phone || "",
+        city: profileData.city || "",
+        country: profileData.country || "",
+      });
+    }
     setIsEditing(false);
-    // Save logic here
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  if (!profileData) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <p className="text-gray-500">
+          No se pudo cargar el perfil. Por favor, intente de nuevo.
+        </p>
+      </div>
+    );
+  }
+
+  const getInitials = () => {
+    return `${profileData.firstName?.[0] || ""}${profileData.lastName?.[0] || ""}`.toUpperCase();
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="font-display text-3xl font-bold text-brand-primary">
-          My Profile
-        </h1>
-        <p className="mt-2 text-lg text-gray-600">
-          Manage your personal information and account settings
-        </p>
-      </div>
-
-      {/* Subscription & Stats */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-gray-200 bg-linear-to-br from-brand-cyan-dark to-brand-cyan p-6 text-white shadow-lg"
-        >
-          <div className="mb-3 flex items-center justify-between">
-            <Crown className="h-8 w-8" />
-          </div>
-          <p className="text-sm font-medium opacity-90">Subscription</p>
-          <p className="mt-1 font-display text-2xl font-bold">
-            {userStats.subscription}
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Mi Perfil</h1>
+          <p className="text-gray-500">
+            Gestiona tu información personal y seguridad
           </p>
-          <p className="mt-2 text-xs opacity-75">
-            Member since {userStats.memberSince}
-          </p>
-        </motion.div>
-
-        <div className="rounded-2xl border border-gray-200 bg-white p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">
-                Classes Completed
-              </p>
-              <p className="mt-1 font-display text-3xl font-bold text-brand-primary">
-                {userStats.completedClasses}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-gray-200 bg-white p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">
-                Lessons Viewed
-              </p>
-              <p className="mt-1 font-display text-3xl font-bold text-brand-primary">
-                {userStats.completedLessons}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-gray-200 bg-white p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">
-                Challenges Completed
-              </p>
-              <p className="mt-1 font-display text-3xl font-bold text-brand-primary">
-                {userStats.challengesCompleted}
-              </p>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Strikes Warning */}
-      {userStats.strikes > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="overflow-hidden rounded-2xl border-2 border-amber-200 bg-amber-50 shadow-sm"
-        >
-          <div className="bg-amber-100 px-6 py-3">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-700" />
-              <span className="text-sm font-bold uppercase tracking-wider text-amber-900">
-                Penalty Status
+      <div className="grid gap-6 md:grid-cols-3">
+        {/* Profile Summary Card */}
+        <div className="md:col-span-1 bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex flex-col items-center text-center">
+            <div className="h-24 w-24 mb-4 rounded-full bg-brand-primary flex items-center justify-center text-white text-2xl font-bold">
+              {profileData.avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profileData.avatar}
+                  alt={profileData.firstName}
+                  className="h-full w-full rounded-full object-cover"
+                />
+              ) : (
+                getInitials()
+              )}
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900">
+              {profileData.firstName} {profileData.lastName}
+            </h2>
+            <p className="text-sm text-gray-500 mb-2">
+              {profileData.email}
+            </p>
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-brand-primary/10 text-brand-primary mb-4">
+              <Shield className="w-3 h-3" />
+              {roleLabels[profileData.role] || profileData.role}
+            </span>
+            <div className="flex items-center text-sm text-gray-500">
+              <Calendar className="w-4 h-4 mr-1" />
+              <span>
+                Miembro desde{" "}
+                {profileData.createdAt
+                  ? format(new Date(profileData.createdAt), "MMMM yyyy", {
+                    locale: es,
+                  })
+                  : "N/A"}
               </span>
             </div>
           </div>
-          <div className="p-6">
-            <div className="mb-4">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-medium text-amber-900">
-                  Accumulated Strikes
-                </span>
-                <span className="font-display text-lg font-bold text-amber-900">
-                  {userStats.strikes} / {userStats.maxStrikes}
-                </span>
-              </div>
-              <div className="h-3 overflow-hidden rounded-full bg-amber-200">
-                <div
-                  className="h-full rounded-full bg-amber-600 transition-all"
-                  style={{
-                    width: `${(userStats.strikes / userStats.maxStrikes) * 100}%`,
-                  }}
-                />
-              </div>
-            </div>
-            <div className="flex items-start gap-3 rounded-xl bg-white p-4">
-              <Calendar className="h-5 w-5 shrink-0 text-amber-600" />
+        </div>
+
+        {/* Profile Details Card */}
+        <div className="md:col-span-2 bg-white rounded-xl border border-gray-200">
+          {/* Tabs */}
+          <div className="border-b border-gray-200 px-6 pt-4">
+            <div className="flex justify-between items-center">
               <div>
-                <p className="text-sm font-bold text-amber-900">
-                  Strikes reset on: {userStats.strikeResetDate}
+                <h3 className="text-lg font-bold text-gray-900">Información de la Cuenta</h3>
+                <p className="text-sm text-gray-500">
+                  Actualiza tu información personal y preferencias
                 </p>
-                <p className="mt-1 text-xs text-amber-800">
-                  If you accumulate {userStats.maxStrikes} strikes, your account will be
-                  temporarily suspended. Cancel classes more than 24 hours in
-                  advance to avoid penalties.
-                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setActiveTab("personal")}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    activeTab === "personal"
+                      ? "bg-brand-primary text-white"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  Personal
+                </button>
+                <button
+                  onClick={() => setActiveTab("security")}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    activeTab === "security"
+                      ? "bg-brand-primary text-white"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  Seguridad
+                </button>
               </div>
             </div>
           </div>
-        </motion.div>
-      )}
 
-      {/* Personal Information */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
-      >
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="font-display text-xl font-bold text-brand-primary">
-            Personal Information
-          </h2>
-          {!isEditing ? (
-            <motion.button
-              onClick={() => setIsEditing(true)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 rounded-xl border-2 border-brand-cyan-dark bg-white px-4 py-2 text-sm font-bold text-brand-cyan-dark transition-all hover:bg-brand-cyan-dark hover:text-white"
-            >
-              <Edit className="h-4 w-4" />
-              Edit
-            </motion.button>
-          ) : (
-            <motion.button
-              onClick={handleSave}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 rounded-xl bg-brand-cyan-dark px-4 py-2 text-sm font-bold text-white shadow-lg shadow-brand-cyan-dark/20 transition-all hover:bg-brand-cyan"
-            >
-              <Save className="h-4 w-4" />
-              Save Changes
-            </motion.button>
-          )}
+          <div className="p-6">
+            {/* Personal Tab */}
+            {activeTab === "personal" && (
+              <div className="space-y-4">
+                <div className="flex justify-end">
+                  {!isEditing ? (
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                      Editar
+                    </button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleCancelEdit}
+                        disabled={saving}
+                        className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        <X className="h-4 w-4" />
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={handleSaveProfile}
+                        disabled={saving}
+                        className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 disabled:opacity-50"
+                      >
+                        {saving ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Save className="h-4 w-4" />
+                        )}
+                        Guardar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="flex items-center text-sm font-medium text-gray-700">
+                      <User className="w-4 h-4 mr-2" />
+                      Nombre
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={formData.firstName}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                          setFormData({ ...formData, firstName: e.target.value })
+                        }
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary"
+                      />
+                    ) : (
+                      <p className="text-sm py-2.5 px-4 bg-gray-50 rounded-xl text-gray-900">
+                        {profileData.firstName || "-"}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center text-sm font-medium text-gray-700">
+                      <User className="w-4 h-4 mr-2" />
+                      Apellido
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={formData.lastName}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                          setFormData({ ...formData, lastName: e.target.value })
+                        }
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary"
+                      />
+                    ) : (
+                      <p className="text-sm py-2.5 px-4 bg-gray-50 rounded-xl text-gray-900">
+                        {profileData.lastName || "-"}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center text-sm font-medium text-gray-700">
+                      <Mail className="w-4 h-4 mr-2" />
+                      Email
+                    </label>
+                    <p className="text-sm py-2.5 px-4 bg-gray-50 rounded-xl text-gray-900">
+                      {profileData.email}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center text-sm font-medium text-gray-700">
+                      <Phone className="w-4 h-4 mr-2" />
+                      Teléfono
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={formData.phone}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                          setFormData({ ...formData, phone: e.target.value })
+                        }
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary"
+                      />
+                    ) : (
+                      <p className="text-sm py-2.5 px-4 bg-gray-50 rounded-xl text-gray-900">
+                        {profileData.phone || "-"}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center text-sm font-medium text-gray-700">
+                      <MapPin className="w-4 h-4 mr-2" />
+                      Ciudad
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={formData.city}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                          setFormData({ ...formData, city: e.target.value })
+                        }
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary"
+                      />
+                    ) : (
+                      <p className="text-sm py-2.5 px-4 bg-gray-50 rounded-xl text-gray-900">
+                        {profileData.city || "-"}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center text-sm font-medium text-gray-700">
+                      <Globe className="w-4 h-4 mr-2" />
+                      País
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={formData.country}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                          setFormData({ ...formData, country: e.target.value })
+                        }
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary"
+                      />
+                    ) : (
+                      <p className="text-sm py-2.5 px-4 bg-gray-50 rounded-xl text-gray-900">
+                        {profileData.country || "-"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Security Tab */}
+            {activeTab === "security" && (
+              <div className="space-y-4 max-w-md">
+                <div className="space-y-2">
+                  <label className="flex items-center text-sm font-medium text-gray-700">
+                    <Lock className="w-4 h-4 mr-2" />
+                    Contraseña Actual
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordData.currentPassword}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      setPasswordData({
+                        ...passwordData,
+                        currentPassword: e.target.value,
+                      })
+                    }
+                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center text-sm font-medium text-gray-700">
+                    <Lock className="w-4 h-4 mr-2" />
+                    Nueva Contraseña
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordData.newPassword}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      setPasswordData({
+                        ...passwordData,
+                        newPassword: e.target.value,
+                      })
+                    }
+                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center text-sm font-medium text-gray-700">
+                    <Lock className="w-4 h-4 mr-2" />
+                    Confirmar Nueva Contraseña
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordData.confirmPassword}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      setPasswordData({
+                        ...passwordData,
+                        confirmPassword: e.target.value,
+                      })
+                    }
+                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary"
+                  />
+                </div>
+
+                <button
+                  onClick={handleChangePassword}
+                  disabled={
+                    saving ||
+                    !passwordData.currentPassword ||
+                    !passwordData.newPassword ||
+                    !passwordData.confirmPassword
+                  }
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-brand-primary text-white rounded-xl hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Lock className="h-4 w-4" />
+                  )}
+                  Cambiar Contraseña
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {/* First Name */}
-          <div>
-            <label className="mb-2 flex items-center gap-2 text-sm font-bold text-gray-700">
-              <User className="h-4 w-4 text-brand-cyan-dark" />
-              First Name
-            </label>
-            <input
-              type="text"
-              value={formData.firstName}
-              onChange={(e) =>
-                setFormData({ ...formData, firstName: e.target.value })
-              }
-              disabled={!isEditing}
-              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition-all ${
-                isEditing
-                  ? "border-gray-200 bg-white focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
-                  : "border-gray-100 bg-gray-50 text-gray-700"
-              }`}
-            />
-          </div>
-
-          {/* Last Name */}
-          <div>
-            <label className="mb-2 flex items-center gap-2 text-sm font-bold text-gray-700">
-              <User className="h-4 w-4 text-brand-cyan-dark" />
-              Last Name
-            </label>
-            <input
-              type="text"
-              value={formData.lastName}
-              onChange={(e) =>
-                setFormData({ ...formData, lastName: e.target.value })
-              }
-              disabled={!isEditing}
-              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition-all ${
-                isEditing
-                  ? "border-gray-200 bg-white focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
-                  : "border-gray-100 bg-gray-50 text-gray-700"
-              }`}
-            />
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="mb-2 flex items-center gap-2 text-sm font-bold text-gray-700">
-              <Mail className="h-4 w-4 text-brand-cyan-dark" />
-              Email
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
-              disabled={!isEditing}
-              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition-all ${
-                isEditing
-                  ? "border-gray-200 bg-white focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
-                  : "border-gray-100 bg-gray-50 text-gray-700"
-              }`}
-            />
-          </div>
-
-          {/* Phone */}
-          <div>
-            <label className="mb-2 flex items-center gap-2 text-sm font-bold text-gray-700">
-              <Phone className="h-4 w-4 text-brand-cyan-dark" />
-              Phone
-            </label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) =>
-                setFormData({ ...formData, phone: e.target.value })
-              }
-              disabled={!isEditing}
-              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition-all ${
-                isEditing
-                  ? "border-gray-200 bg-white focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
-                  : "border-gray-100 bg-gray-50 text-gray-700"
-              }`}
-            />
-          </div>
-
-          {/* City */}
-          <div>
-            <label className="mb-2 flex items-center gap-2 text-sm font-bold text-gray-700">
-              <MapPin className="h-4 w-4 text-brand-cyan-dark" />
-              City
-            </label>
-            <input
-              type="text"
-              value={formData.city}
-              onChange={(e) =>
-                setFormData({ ...formData, city: e.target.value })
-              }
-              disabled={!isEditing}
-              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition-all ${
-                isEditing
-                  ? "border-gray-200 bg-white focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
-                  : "border-gray-100 bg-gray-50 text-gray-700"
-              }`}
-            />
-          </div>
-
-          {/* Country */}
-          <div>
-            <label className="mb-2 flex items-center gap-2 text-sm font-bold text-gray-700">
-              <Globe className="h-4 w-4 text-brand-cyan-dark" />
-              Country
-            </label>
-            <input
-              type="text"
-              value={formData.country}
-              onChange={(e) =>
-                setFormData({ ...formData, country: e.target.value })
-              }
-              disabled={!isEditing}
-              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition-all ${
-                isEditing
-                  ? "border-gray-200 bg-white focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
-                  : "border-gray-100 bg-gray-50 text-gray-700"
-              }`}
-            />
-          </div>
-        </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

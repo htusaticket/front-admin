@@ -34,9 +34,10 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Force input text color to dark */
+/* Force input/select text color to dark */
 input,
-textarea {
+textarea,
+select {
   color: #111827 !important;
 }
 
@@ -44,4 +45,9 @@ input::placeholder,
 textarea::placeholder {
   color: #9ca3af;
   opacity: 1;
+}
+
+/* Fix select styling */
+select option {
+  color: #111827;
 }

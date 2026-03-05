@@ -1,9 +1,11 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, Upload, FileText, AlertCircle } from "lucide-react";
+import { X, Check, Upload, FileText, AlertCircle, Loader2 } from "lucide-react";
 import mammoth from "mammoth";
 import { useState } from "react";
+
+import { useJobsStore } from "@/store/jobs";
 
 interface UploadJobsModalProps {
   isOpen: boolean;
@@ -23,6 +25,8 @@ interface ParsedJob {
 }
 
 export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
+  const { bulkCreateJobs, isSaving } = useJobsStore();
+  
   const [file, setFile] = useState<File | null>(null);
   const [parsedJobs, setParsedJobs] = useState<ParsedJob[]>([]);
   const [_parsing, setParsing] = useState(false);
@@ -119,8 +123,21 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
     }
   };
 
-  const handleSubmit = () => {
-    // TODO: Send parsedJobs to API
+  const handleSubmit = async () => {
+    // Transform parsed jobs to API format
+    const jobsToCreate = parsedJobs.map(job => ({
+      title: job.title,
+      company: job.name || "Unknown Company",
+      location: "Remote", // Default, would need parsing if provided
+      description: job.offer || job.notes || "Job offer from bulk upload",
+      type: job.hiring || "Full-time",
+      salaryRange: job.ote || undefined,
+      requirements: job.offer ? [job.offer] : [],
+    }));
+    
+    await bulkCreateJobs(jobsToCreate);
+    setParsedJobs([]);
+    setFile(null);
     onClose();
   };
 
@@ -214,16 +231,20 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
 
               {/* Footer */}
               <div className="flex justify-end gap-3 border-t border-gray-100 bg-gray-50 px-6 py-4">
-                <button onClick={onClose} className="rounded-xl px-4 py-2 font-semibold text-gray-600 hover:bg-gray-200">
+                <button onClick={onClose} disabled={isSaving} className="rounded-xl px-4 py-2 font-semibold text-gray-600 hover:bg-gray-200 disabled:opacity-50">
                   Cancel
                 </button>
                 <button 
-                  disabled={parsedJobs.length === 0}
+                  disabled={parsedJobs.length === 0 || isSaving}
                   onClick={handleSubmit}
                   className="flex items-center gap-2 rounded-xl bg-brand-primary px-6 py-2 font-bold text-white transition-all hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Check className="h-4 w-4" />
-                  Process & Upload
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4" />
+                  )}
+                  {isSaving ? "Processing..." : "Process & Upload"}
                 </button>
               </div>
             </motion.div>

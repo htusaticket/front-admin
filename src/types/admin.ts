@@ -2,6 +2,7 @@
 export type UserRole = "SUPERADMIN" | "ADMIN" | "USER" | "JOB_UPLOADER";
 export type UserStatus = "PENDING" | "ACTIVE" | "SUSPENDED";
 export type UserPlan = "PRO" | "ELITE" | "LEVEL_UP" | "HIRING_HUB" | "SKILL_BUILDER";
+export type SubscriptionStatus = "ACTIVE" | "EXPIRED" | "CANCELLED";
 export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 export type SubmissionStatus = "PENDING" | "APPROVED" | "NEEDS_IMPROVEMENT";
 export type ChallengeType = "AUDIO" | "QUIZ";
@@ -32,6 +33,8 @@ export interface AuthUser {
   avatar?: string;
   role: UserRole;
   status: UserStatus;
+  isPunished: boolean;
+  punishedUntil: string | null;
   createdAt: string;
 }
 
@@ -55,6 +58,28 @@ export type AuthErrorCode =
   | "MISSING_TOKEN"
   | "FORBIDDEN";
 
+// ==================== SUBSCRIPTIONS ====================
+export interface Subscription {
+  id: string;
+  userId: string;
+  plan: UserPlan;
+  status: SubscriptionStatus;
+  startDate: string;
+  endDate: string;
+  hasPaid: boolean;
+  paidAt: string | null;
+  paymentNote: string | null;
+  assignedBy: string | null;
+  createdAt: string;
+  user?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    status: UserStatus;
+  };
+}
+
 // ==================== ADMIN - USERS ====================
 export interface AdminUser {
   id: string;
@@ -65,8 +90,8 @@ export interface AdminUser {
   role: UserRole;
   status: UserStatus;
   plan: UserPlan | null;
-  startDate: string | null;
-  endDate: string | null;
+  isPunished: boolean;
+  punishedUntil: string | null;
   createdAt: string;
   lastLoginAt: string | null;
   strikeCount: number;
@@ -78,9 +103,12 @@ export interface AdminUserDetail extends AdminUser {
   reference: string | null;
   avatar: string | null;
   adminNotes: string | null;
+  startDate: string | null;
+  endDate: string | null;
   strikes: Strike[];
   enrollments: UserEnrollment[];
   academyProgress: AcademyProgress[];
+  subscription: Subscription | null;
 }
 
 export interface Strike {
@@ -122,7 +150,6 @@ export interface GetUsersQuery {
   search?: string;
   role?: UserRole;
   status?: UserStatus;
-  plan?: UserPlan;
   sortBy?: "createdAt" | "lastLoginAt" | "firstName";
   sortOrder?: "asc" | "desc";
 }
@@ -135,9 +162,6 @@ export interface CreateUserPayload {
   lastName: string;
   phone?: string;
   role?: UserRole;
-  plan?: UserPlan;
-  startDate?: string;
-  endDate?: string;
 }
 
 // Update user payload
@@ -147,15 +171,43 @@ export interface UpdateUserPayload {
   lastName?: string;
   phone?: string;
   role?: UserRole;
-  plan?: UserPlan;
-  startDate?: string;
-  endDate?: string;
 }
 
 // Update user status payload
 export interface UpdateStatusPayload {
   status: UserStatus;
   reason?: string;
+}
+
+// Approve registration response (PENDING -> ACTIVE)
+export interface ApproveRegistrationResponse {
+  id: string;
+  status: UserStatus;
+  message: string;
+}
+
+// Reject registration payload (deletes user from DB)
+export interface RejectRegistrationPayload {
+  reason: string;
+}
+
+export interface RejectRegistrationResponse {
+  message: string;
+  deletedUserId: string;
+}
+
+// Activate user payload (INACTIVE -> ACTIVE, SUPERADMIN only)
+export interface ActivateUserPayload {
+  plan: UserPlan;
+}
+
+export interface ActivateUserResponse {
+  id: string;
+  status: UserStatus;
+  plan: UserPlan;
+  startDate: string;
+  endDate: string;
+  message: string;
 }
 
 // Issue strike payload
@@ -253,4 +305,49 @@ export interface ReviewSubmissionPayload {
   status: "APPROVED" | "NEEDS_IMPROVEMENT";
   feedback: string;
   score?: number;
+}
+
+// ==================== SYSTEM CONFIG ====================
+export interface SystemConfig {
+  id: string;
+  maxStrikesForPunishment: number;
+  punishmentDurationDays: number;
+  lateCancellationHours: number;
+  jobBoardEnabled: boolean;
+  academyEnabled: boolean;
+  updatedAt: string;
+}
+
+export interface UpdateSystemConfigPayload {
+  maxStrikesForPunishment?: number;
+  punishmentDurationDays?: number;
+  lateCancellationHours?: number;
+  jobBoardEnabled?: boolean;
+  academyEnabled?: boolean;
+}
+
+// ==================== SUBSCRIPTIONS MANAGEMENT ====================
+export interface CreateSubscriptionPayload {
+  userId: string;
+  plan: UserPlan;
+  startDate: string;
+  endDate: string;
+  hasPaid?: boolean;
+  paymentNote?: string;
+}
+
+export interface UpdateSubscriptionPayload {
+  plan?: UserPlan;
+  status?: SubscriptionStatus;
+  startDate?: string;
+  endDate?: string;
+  hasPaid?: boolean;
+  paymentNote?: string;
+}
+
+export interface GetSubscriptionsQuery {
+  page?: number;
+  limit?: number;
+  userId?: string;
+  status?: SubscriptionStatus;
 }

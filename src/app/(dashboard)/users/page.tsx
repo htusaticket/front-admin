@@ -279,6 +279,7 @@ export default function UsersPage() {
                               : "bg-amber-100 text-amber-800"
                         }`}>
                           {user.status}
+                          {user.isPunished && " (Punished)"}
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">

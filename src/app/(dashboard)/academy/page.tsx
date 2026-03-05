@@ -4,89 +4,46 @@ import { motion } from "framer-motion";
 import {
   BookOpen,
   Send,
+  Loader2,
+  AlertCircle,
+  Trash2,
+  Eye,
+  Video,
+  Settings,
 } from "lucide-react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 
 import { AddModuleModal } from "@/components/academy/AddModuleModal";
 import { SuggestCourseModal } from "@/components/academy/SuggestCourseModal";
-
-// Type definitions
-type Lesson = {
-  id: number;
-  title: string;
-  duration: string;
-  completed: boolean;
-  isActive?: boolean;
-  locked?: boolean;
-};
-
-type Module = {
-  id: number;
-  title: string;
-  description: string;
-  image: string;
-  progress: number;
-  lessons: Lesson[];
-};
-
-// Mock data
-const modules: Module[] = [
-  {
-    id: 1,
-    title: "Foundations & Goals",
-    description: "Start your journey by setting clear objectives and understanding the core principles of effective language learning. This module covers the essential mindset changes required for success.",
-    image: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1000&auto=format&fit=crop",
-    progress: 100,
-    lessons: [
-      { id: 1, title: "Introduction", duration: "10 min", completed: true },
-      { id: 2, title: "Setting Goals", duration: "15 min", completed: true },
-      { id: 3, title: "Vocabulary", duration: "20 min", completed: true },
-    ],
-  },
-  {
-    id: 2,
-    title: "Conversation Basics",
-    description: "Master the art of small talk and introductions. Learn how to confidently start conversations in professional settings and keep them going with active listening techniques.",
-    image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=1000&auto=format&fit=crop",
-    progress: 66,
-    lessons: [
-      { id: 4, title: "Greetings", duration: "12 min", completed: true },
-      { id: 5, title: "Small Talk", duration: "18 min", completed: true },
-      { id: 6, title: "Active Listening", duration: "22 min", completed: false, isActive: true },
-    ],
-  },
-  {
-    id: 3,
-    title: "Business English",
-    description: "Dive into the world of corporate communication. From writing professional emails to delivering impactful presentations, this module equips you with the tools for the office.",
-    image: "https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=1000&auto=format&fit=crop",
-    progress: 40,
-    lessons: [
-      { id: 7, title: "Email Writing", duration: "25 min", completed: true },
-      { id: 8, title: "Meeting Vocab", duration: "20 min", completed: true },
-      { id: 9, title: "Presentations", duration: "30 min", completed: false },
-    ],
-  },
-  {
-    id: 4,
-    title: "Advanced Topics",
-    description: "Refine your skills with complex idioms, cultural nuances, and advanced negotiation tactics. Perfect for those looking to reach near-native fluency levels.",
-    image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1000&auto=format&fit=crop",
-    progress: 0,
-    lessons: [
-      { id: 10, title: "Idioms", duration: "18 min", completed: false, locked: true },
-      { id: 11, title: "Cultural Nuances", duration: "25 min", completed: false, locked: true },
-    ],
-  },
-];
+import { useAcademyStore, type Module } from "@/store/academy";
+import { useAuthStore } from "@/store/auth";
 
 export default function AcademyPage() {
+  const router = useRouter();
+  const { user } = useAuthStore();
+  const { 
+    modules, 
+    isLoading, 
+    isSaving, 
+    error, 
+    fetchModules, 
+    deleteModule, 
+  } = useAcademyStore();
+  
   const [isAddModuleOpen, setIsAddModuleOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   
   // Suggestion State
   const [isSuggestOpen, setIsSuggestOpen] = useState(false);
   const [suggestingModule, setSuggestingModule] = useState<Module | null>(null);
+
+  const isSuperAdmin = user?.role === "SUPERADMIN";
+
+  useEffect(() => {
+    fetchModules();
+  }, [fetchModules]);
 
   const handleEditModule = (module: Module) => {
     setEditingModule(module);
@@ -102,6 +59,26 @@ export default function AcademyPage() {
     setSuggestingModule(module);
     setIsSuggestOpen(true);
   };
+
+  const handleDeleteModule = async (module: Module) => {
+    if (!isSuperAdmin) {
+      return;
+    }
+    
+    if (confirm(`¿Estás seguro de eliminar el módulo "${module.title}"? Esta acción no se puede deshacer.`)) {
+      setDeletingId(module.id);
+      await deleteModule(module.id);
+      setDeletingId(null);
+    }
+  };
+
+  if (isLoading && modules.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -123,63 +100,113 @@ export default function AcademyPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {modules.map((module, index) => (
-          <motion.div
-            key={module.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:shadow-lg"
-          >
-            <div className="relative h-48 w-full overflow-hidden bg-gray-100">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={module.image}
-                alt={module.title}
-                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-black/10 transition-colors group-hover:bg-black/0" />
-              <div className="absolute top-4 right-4 flex gap-2">
-                <button 
-                  onClick={() => handleSuggest(module)}
-                  className="rounded-lg bg-white/90 p-2 text-gray-700 shadow-sm hover:text-brand-primary"
-                  title="Suggest to Student"
-                >
-                  <Send className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
+      {error && (
+        <div className="flex items-center gap-2 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600">
+          <AlertCircle className="h-5 w-5 shrink-0" />
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
 
-            <div className="flex flex-1 flex-col p-5">
-              <div className="flex items-start justify-between">
-                <h4 className="font-display text-lg font-bold text-brand-primary">
-                  {module.title}
-                </h4>
-                <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-bold text-gray-600">
-                  {module.lessons.length} Lessons
-                </span>
+      {modules.length === 0 && !isLoading ? (
+        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-gray-200">
+          <BookOpen className="h-12 w-12 text-gray-300 mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900">No hay módulos</h3>
+          <p className="text-sm text-gray-500 mt-1">Crea el primer módulo para comenzar</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {modules.map((module, index) => (
+            <motion.div
+              key={module.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:shadow-lg"
+            >
+              <div className="relative h-48 w-full overflow-hidden bg-gray-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={module.image || "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1000&auto=format&fit=crop"}
+                  alt={module.title}
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-black/10 transition-colors group-hover:bg-black/0" />
+                
+                {/* Status badges */}
+                <div className="absolute top-4 left-4 flex flex-col gap-2">
+                  {module.visibleForSkillBuilder && (
+                    <span className="flex items-center gap-1 rounded-lg bg-green-500 px-2 py-1 text-xs font-bold text-white">
+                      <Eye className="h-3 w-3" />
+                      Skill Builder
+                    </span>
+                  )}
+                </div>
+                
+                <div className="absolute top-4 right-4 flex gap-2">
+                  <button 
+                    onClick={() => handleSuggest(module)}
+                    className="rounded-lg bg-white/90 p-2 text-gray-700 shadow-sm hover:text-brand-primary"
+                    title="Suggest to Student"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-              
-              <p className="mt-2 line-clamp-2 text-sm text-gray-600">
-                {module.description}
-              </p>
 
-              <div className="mt-6 flex items-center gap-3 pt-4 border-t border-gray-100">
-                <button
-                  onClick={() => handleEditModule(module)}
-                  className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:border-brand-primary hover:text-brand-primary transition-colors"
-                >
-                  Edit Content
-                </button>
-                <button className="flex-1 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-100 transition-colors">
-                  Delete
-                </button>
+              <div className="flex flex-1 flex-col p-5">
+                <div className="flex items-start justify-between">
+                  <h4 className="font-display text-lg font-bold text-brand-primary">
+                    {module.title}
+                  </h4>
+                  <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-bold text-gray-600">
+                    {module.lessonsCount || 0} Lessons
+                  </span>
+                </div>
+                
+                <p className="mt-2 line-clamp-2 text-sm text-gray-600">
+                  {module.description}
+                </p>
+
+                <div className="mt-6 flex items-center gap-2 pt-4 border-t border-gray-100">
+                  {/* Manage Lessons - Primary action */}
+                  <button
+                    onClick={() => router.push(`/academy/${module.id}`)}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-brand-cyan-dark px-3 py-2 text-sm font-semibold text-white hover:bg-brand-cyan transition-colors"
+                  >
+                    <Video className="h-4 w-4" />
+                    Lecciones
+                  </button>
+                  
+                  {/* Edit Module */}
+                  <button
+                    onClick={() => handleEditModule(module)}
+                    className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:border-brand-primary hover:text-brand-primary transition-colors"
+                    title="Editar módulo"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </button>
+                  
+                  {/* Delete Module */}
+                  {isSuperAdmin && (
+                    <button 
+                      onClick={() => handleDeleteModule(module)}
+                      disabled={isSaving && deletingId === module.id}
+                      className="flex items-center justify-center gap-2 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
+                      title="Eliminar módulo"
+                    >
+                      {isSaving && deletingId === module.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
       
       <AddModuleModal
         isOpen={isAddModuleOpen}

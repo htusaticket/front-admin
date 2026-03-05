@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { create } from "zustand";
 
 import api, { getErrorMessage } from "@/lib/api";
@@ -12,6 +13,11 @@ import type {
   UpdateNotesPayload,
   PaginatedResponse,
   ApiResponse,
+  RejectRegistrationPayload,
+  ActivateUserPayload,
+  ApproveRegistrationResponse,
+  RejectRegistrationResponse,
+  ActivateUserResponse,
 } from "@/types/admin";
 
 interface UsersState {
@@ -33,6 +39,12 @@ interface UsersActions {
   updateUserStatus: (userId: string, data: UpdateStatusPayload) => Promise<{ success: boolean; message?: string }>;
   updateUserNotes: (userId: string, data: UpdateNotesPayload) => Promise<{ success: boolean; message?: string }>;
   issueStrike: (userId: string, data: IssueStrikePayload) => Promise<{ success: boolean; message?: string }>;
+  approveRegistration: (userId: string) => Promise<{ success: boolean; message?: string }>;
+  rejectRegistration: (
+    userId: string,
+    data: RejectRegistrationPayload,
+  ) => Promise<{ success: boolean; message?: string }>;
+  activateUser: (userId: string, data: ActivateUserPayload) => Promise<{ success: boolean; message?: string }>;
   clearError: () => void;
   clearSelectedUser: () => void;
   reset: () => void;
@@ -64,7 +76,6 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
       if (query?.search) params.append("search", query.search);
       if (query?.role) params.append("role", query.role);
       if (query?.status) params.append("status", query.status);
-      if (query?.plan) params.append("plan", query.plan);
       if (query?.sortBy) params.append("sortBy", query.sortBy);
       if (query?.sortOrder) params.append("sortOrder", query.sortOrder);
 
@@ -224,17 +235,116 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      const response = await api.post<ApiResponse<{ strikeCount: number; status: string }>>(
+      const response = await api.post<ApiResponse<{ 
+        totalStrikes: number; 
+        userPunished: boolean;
+        punishedUntil: string | null;
+      }>>(
         `/api/admin/users/${userId}/strike`, 
         data,
       );
       
-      // Actualizar conteo de strikes y status
-      const { strikeCount, status } = response.data.data;
+      // Actualizar conteo de strikes en la lista
+      const { totalStrikes, userPunished, punishedUntil } = response.data.data;
       
       set(state => ({
         users: state.users.map(u => 
-          u.id === userId ? { ...u, strikeCount, status: status as AdminUser["status"] } : u,
+          u.id === userId 
+            ? { 
+              ...u, 
+              strikeCount: totalStrikes,
+              isPunished: userPunished,
+              punishedUntil: punishedUntil,
+            } 
+            : u,
+        ),
+        isLoading: false,
+      }));
+      
+      // Si hay usuario seleccionado, recargar detalles
+      if (get().selectedUser?.id === userId) {
+        await get().fetchUserDetails(userId);
+      }
+      
+      toast.success(response.data.message || "Strike issued successfully");
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      set({ error: errorMessage, isLoading: false });
+      toast.error(errorMessage);
+      return { success: false, message: errorMessage };
+    }
+  },
+
+  approveRegistration: async (userId: string) => {
+    set({ isLoading: true, error: null });
+    
+    try {
+      const response = await api.post<ApiResponse<ApproveRegistrationResponse>>(
+        `/api/admin/users/${userId}/approve`,
+      );
+      
+      // Actualizar usuario en la lista local (PENDING -> ACTIVE)
+      set(state => ({
+        users: state.users.map(u => 
+          u.id === userId ? { ...u, status: "ACTIVE" as const } : u,
+        ),
+        isLoading: false,
+      }));
+      
+      // Si hay usuario seleccionado, recargar detalles
+      if (get().selectedUser?.id === userId) {
+        await get().fetchUserDetails(userId);
+      }
+      
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      set({ error: errorMessage, isLoading: false });
+      return { success: false, message: errorMessage };
+    }
+  },
+
+  rejectRegistration: async (userId: string, data: RejectRegistrationPayload) => {
+    set({ isLoading: true, error: null });
+    
+    try {
+      const response = await api.delete<ApiResponse<RejectRegistrationResponse>>(
+        `/api/admin/users/${userId}/reject`,
+        { data },
+      );
+      
+      // Eliminar usuario de la lista local
+      set(state => ({
+        users: state.users.filter(u => u.id !== userId),
+        selectedUser: state.selectedUser?.id === userId ? null : state.selectedUser,
+        total: state.total - 1,
+        isLoading: false,
+      }));
+      
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      set({ error: errorMessage, isLoading: false });
+      return { success: false, message: errorMessage };
+    }
+  },
+
+  activateUser: async (userId: string, data: ActivateUserPayload) => {
+    set({ isLoading: true, error: null });
+    
+    try {
+      const response = await api.post<ApiResponse<ActivateUserResponse>>(
+        `/api/admin/users/${userId}/activate`,
+        data,
+      );
+      
+      const { plan } = response.data.data;
+      
+      // Actualizar usuario en la lista local (INACTIVE -> ACTIVE)
+      set(state => ({
+        users: state.users.map(u => 
+          u.id === userId ? { ...u, status: "ACTIVE" as const, plan } : u,
         ),
         isLoading: false,
       }));

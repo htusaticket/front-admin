@@ -1,11 +1,11 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, Loader2 } from "lucide-react";
+import { X, Loader2, Check } from "lucide-react";
 import { useState } from "react";
 
 import { useUsersStore } from "@/store/users";
-import type { UserRole, UserPlan } from "@/types/admin";
+import type { UserRole } from "@/types/admin";
 
 interface AddUserModalProps {
   isOpen: boolean;
@@ -22,9 +22,6 @@ export function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
     password: "",
     phone: "",
     role: "USER" as UserRole,
-    plan: "" as UserPlan | "",
-    startDate: "",
-    endDate: "",
   });
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -39,9 +36,6 @@ export function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
       lastName: formData.lastName,
       phone: formData.phone || undefined,
       role: formData.role,
-      plan: formData.plan || undefined,
-      startDate: formData.startDate || undefined,
-      endDate: formData.endDate || undefined,
     });
 
     if (result.success) {
@@ -53,9 +47,6 @@ export function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
         password: "",
         phone: "",
         role: "USER",
-        plan: "",
-        startDate: "",
-        endDate: "",
       });
       onClose();
     } else {
@@ -207,57 +198,11 @@ export function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
                       <option value="JOB_UPLOADER">Job Uploader</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                      Plan
-                    </label>
-                    <select
-                      value={formData.plan}
-                      onChange={(e) =>
-                        setFormData({ ...formData, plan: e.target.value as UserPlan | "" })
-                      }
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20 bg-white"
-                    >
-                      <option value="">No Plan</option>
-                      <option value="PRO">PRO</option>
-                      <option value="ELITE">ELITE</option>
-                      <option value="LEVEL_UP">LEVEL UP</option>
-                      <option value="HIRING_HUB">HIRING HUB</option>
-                      <option value="SKILL_BUILDER">SKILL BUILDER</option>
-                    </select>
-                  </div>
                 </div>
 
-                {formData.plan && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                        Start Date
-                      </label>
-                      <input
-                        type="date"
-                        value={formData.startDate}
-                        onChange={(e) =>
-                          setFormData({ ...formData, startDate: e.target.value })
-                        }
-                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                        End Date
-                      </label>
-                      <input
-                        type="date"
-                        value={formData.endDate}
-                        onChange={(e) =>
-                          setFormData({ ...formData, endDate: e.target.value })
-                        }
-                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
-                      />
-                    </div>
-                  </div>
-                )}
+                <p className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+                  💡 To assign a subscription plan, use the Subscriptions page after creating the user.
+                </p>
 
                 <div className="flex justify-end gap-3 pt-4">
                   <button

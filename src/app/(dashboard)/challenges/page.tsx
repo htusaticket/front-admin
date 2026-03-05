@@ -1,37 +1,34 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Plus, Upload, Mic, HelpCircle, Calendar, Circle } from "lucide-react";
-import { useState } from "react";
+import { Plus, Upload, Mic, HelpCircle, Calendar, Circle, Loader2, AlertCircle, Trash2, PenLine } from "lucide-react";
+import { useState, useEffect } from "react";
 
 import { BulkUploadChallengesModal } from "@/components/challenges/BulkUploadChallengesModal";
 import { CreateChallengeModal } from "@/components/challenges/CreateChallengeModal";
-
-// Mock Data
-const challenges = [
-  {
-    id: 1,
-    title: "Listen to Podcast #4",
-    description: "Listen to the daily audio and answer the question.",
-    date: new Date().toISOString().split("T")[0], // Today
-    status: "Active",
-    type: "Audio",
-  },
-  {
-    id: 2,
-    title: "Negotiation Quiz",
-    description: "Test your knowledge on closing techniques.",
-    date: new Date(Date.now() + 86400000).toISOString().split("T")[0], // Tomorrow
-    status: "Scheduled",
-    type: "MultipleChoice",
-    options: ["Always close", "Listen first", "Speak fast"],
-    correctAnswer: "Listen first",
-  },
-];
+import { useAuthStore } from "@/store/auth";
+import { useChallengesStore, type Challenge } from "@/store/challenges";
 
 export default function ChallengesPage() {
+  const { user } = useAuthStore();
+  const { 
+    challenges, 
+    isLoading, 
+    isSaving, 
+    error, 
+    fetchChallenges, 
+    deleteChallenge, 
+  } = useChallengesStore();
+  
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  
+  const isSuperAdmin = user?.role === "SUPERADMIN";
+  
+  useEffect(() => {
+    fetchChallenges();
+  }, [fetchChallenges]);
 
   // Generate next 7 days
   const today = new Date();
@@ -45,7 +42,26 @@ export default function ChallengesPage() {
     };
   });
 
-  const getChallengeForDate = (date: string) => challenges.find(c => c.date === date);
+  const getChallengeForDate = (date: string) => 
+    challenges.find(c => c.scheduledDate === date);
+  
+  const handleDeleteChallenge = async (challenge: Challenge) => {
+    if (!isSuperAdmin) return;
+    
+    if (confirm(`¿Estás seguro de eliminar el reto "${challenge.title}"?`)) {
+      setDeletingId(challenge.id);
+      await deleteChallenge(challenge.id);
+      setDeletingId(null);
+    }
+  };
+  
+  if (isLoading && challenges.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -77,6 +93,13 @@ export default function ChallengesPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="flex items-center gap-2 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600">
+          <AlertCircle className="h-5 w-5 shrink-0" />
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
+
       {/* 7-Day Calendar View */}
       <div className="rounded-2xl border border-gray-200 bg-white p-6">
         <div className="flex items-center gap-2 mb-4">
@@ -104,9 +127,13 @@ export default function ChallengesPage() {
                 {challenge ? (
                   <div className="flex flex-col items-center gap-1">
                     <div className={`p-1.5 rounded-full ${
-                      challenge.type === "Audio" ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"
+                      challenge.type === "AUDIO" ? "bg-purple-100 text-purple-600" : 
+                        challenge.type === "WRITING" ? "bg-green-100 text-green-600" :
+                          "bg-blue-100 text-blue-600"
                     }`}>
-                      {challenge.type === "Audio" ? <Mic className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />}
+                      {challenge.type === "AUDIO" ? <Mic className="h-4 w-4" /> : 
+                        challenge.type === "WRITING" ? <PenLine className="h-4 w-4" /> :
+                          <HelpCircle className="h-4 w-4" />}
                     </div>
                     <span className="text-[10px] font-medium text-gray-600 truncate w-full text-center px-1">
                       {challenge.type}
@@ -141,17 +168,20 @@ export default function ChallengesPage() {
             >
               <div className="flex items-start gap-4">
                 <div className={`mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                  challenge.type === "Audio" ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"
+                  challenge.type === "AUDIO" ? "bg-purple-100 text-purple-600" : 
+                    challenge.type === "WRITING" ? "bg-green-100 text-green-600" :
+                      "bg-blue-100 text-blue-600"
                 }`}>
-                  {challenge.type === "Audio" && <Mic className="h-5 w-5" />}
-                  {challenge.type === "MultipleChoice" && <HelpCircle className="h-5 w-5" />}
+                  {challenge.type === "AUDIO" && <Mic className="h-5 w-5" />}
+                  {challenge.type === "MULTIPLE_CHOICE" && <HelpCircle className="h-5 w-5" />}
+                  {challenge.type === "WRITING" && <PenLine className="h-5 w-5" />}
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900">{challenge.title}</h3>
                   <p className="text-sm text-gray-500 line-clamp-1">{challenge.description}</p>
-                  {challenge.type === "MultipleChoice" && (
+                  {challenge.type === "MULTIPLE_CHOICE" && challenge.quizQuestions && challenge.quizQuestions.length > 0 && (
                     <p className="mt-1 text-xs text-gray-400">
-                      {challenge.options?.length} Options • Correct: {challenge.correctAnswer}
+                      {challenge.quizQuestions.length} Question(s)
                     </p>
                   )}
                 </div>
@@ -159,15 +189,26 @@ export default function ChallengesPage() {
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-100 rounded-md px-2 py-1">
                   <Calendar className="h-3.5 w-3.5" />
-                  {challenge.date}
+                  {challenge.scheduledDate}
                 </div>
                 <div className="flex gap-2">
                   <button className="text-sm font-semibold text-gray-400 hover:text-brand-primary">
                         Edit
                   </button>
-                  <button className="text-sm font-semibold text-red-400 hover:text-red-600">
-                        Delete
-                  </button>
+                  {isSuperAdmin && (
+                    <button 
+                      onClick={() => handleDeleteChallenge(challenge)}
+                      disabled={isSaving && deletingId === challenge.id}
+                      className="flex items-center gap-1 text-sm font-semibold text-red-400 hover:text-red-600 disabled:opacity-50"
+                    >
+                      {isSaving && deletingId === challenge.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                    Delete
+                    </button>
+                  )}
                 </div>
               </div>
             </motion.div>

@@ -1,8 +1,10 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Trash2, Mic, HelpCircle } from "lucide-react";
+import { X, Plus, Trash2, Mic, HelpCircle, Loader2, PenLine } from "lucide-react";
 import { useState } from "react";
+
+import { useChallengesStore } from "@/store/challenges";
 
 interface CreateChallengeModalProps {
   isOpen: boolean;
@@ -17,11 +19,16 @@ interface Question {
 }
 
 export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalProps) {
+  const { createChallenge, isSaving } = useChallengesStore();
+  
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     date: "",
-    type: "Audio", // Audio | MultipleChoice
+    type: "AUDIO" as "AUDIO" | "MULTIPLE_CHOICE" | "WRITING",
+    visibleForSkillBuilder: false,
+    audioUrl: "",
+    writingPrompt: "",
     questions: [
       { id: 1, text: "", options: ["", "", ""], correctAnswer: "" },
     ] as Question[],
@@ -72,9 +79,9 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
   };
 
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.type === "MultipleChoice") {
+    if (formData.type === "MULTIPLE_CHOICE") {
       // Validate all questions
       for (let i = 0; i < formData.questions.length; i++) {
         const q = formData.questions[i];
@@ -93,7 +100,38 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
       }
     }
 
-    // TODO: Send formData to API
+    // Prepare data for API
+    const challengeData = {
+      title: formData.title,
+      description: formData.description,
+      scheduledDate: formData.date,
+      type: formData.type,
+      visibleForSkillBuilder: formData.visibleForSkillBuilder,
+      audioUrl: formData.type === "AUDIO" ? formData.audioUrl : undefined,
+      writingPrompt: formData.type === "WRITING" ? formData.writingPrompt : undefined,
+      quizQuestions: formData.type === "MULTIPLE_CHOICE" 
+        ? formData.questions.map(q => ({
+          question: q.text,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+        }))
+        : undefined,
+    };
+    
+    await createChallenge(challengeData);
+    
+    // Reset form
+    setFormData({
+      title: "",
+      description: "",
+      date: "",
+      type: "AUDIO",
+      visibleForSkillBuilder: false,
+      audioUrl: "",
+      writingPrompt: "",
+      questions: [{ id: 1, text: "", options: ["", "", ""], correctAnswer: "" }],
+    });
+    
     onClose();
   };
 
@@ -120,12 +158,12 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                 {/* Type Selection */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700">Challenge Type</label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <button
                       type="button"
-                      onClick={() => setFormData({...formData, type: "Audio"})}
+                      onClick={() => setFormData({...formData, type: "AUDIO"})}
                       className={`flex items-center justify-center gap-2 rounded-xl border p-3 transition-all ${
-                        formData.type === "Audio" 
+                        formData.type === "AUDIO" 
                           ? "border-brand-primary bg-brand-primary/5 text-brand-primary font-bold" 
                           : "border-gray-200 hover:bg-gray-50 text-gray-600"
                       }`}
@@ -135,15 +173,27 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                     </button>
                     <button
                       type="button"
-                      onClick={() => setFormData({...formData, type: "MultipleChoice"})}
+                      onClick={() => setFormData({...formData, type: "MULTIPLE_CHOICE"})}
                       className={`flex items-center justify-center gap-2 rounded-xl border p-3 transition-all ${
-                        formData.type === "MultipleChoice" 
+                        formData.type === "MULTIPLE_CHOICE" 
                           ? "border-brand-primary bg-brand-primary/5 text-brand-primary font-bold" 
                           : "border-gray-200 hover:bg-gray-50 text-gray-600"
                       }`}
                     >
                       <HelpCircle className="h-4 w-4" />
-                         Multiple Choice
+                         Quiz
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({...formData, type: "WRITING"})}
+                      className={`flex items-center justify-center gap-2 rounded-xl border p-3 transition-all ${
+                        formData.type === "WRITING" 
+                          ? "border-brand-primary bg-brand-primary/5 text-brand-primary font-bold" 
+                          : "border-gray-200 hover:bg-gray-50 text-gray-600"
+                      }`}
+                    >
+                      <PenLine className="h-4 w-4" />
+                         Writing
                     </button>
                   </div>
                 </div>
@@ -156,7 +206,7 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                       type="text" 
                       required
                       className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-brand-primary"
-                      placeholder={formData.type === "Audio" ? "e.g. Listen to Podcast" : "e.g. Weekly Quiz"}
+                      placeholder={formData.type === "AUDIO" ? "e.g. Listen to Podcast" : "e.g. Weekly Quiz"}
                       value={formData.title}
                       onChange={e => setFormData({...formData, title: e.target.value})}
                     />
@@ -184,11 +234,31 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                       onChange={e => setFormData({...formData, date: e.target.value})}
                     />
                   </div>
+
+                  {/* Skill Builder Visibility */}
+                  <div className="rounded-xl border border-gray-200 p-4 bg-gray-50">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.visibleForSkillBuilder}
+                        onChange={(e) =>
+                          setFormData({ ...formData, visibleForSkillBuilder: e.target.checked })
+                        }
+                        className="h-5 w-5 rounded border-gray-300 text-brand-primary focus:ring-brand-primary/20"
+                      />
+                      <div>
+                        <span className="font-semibold text-gray-900">Visible for Skill Builder</span>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Enable this to make the challenge accessible for users with the Skill Builder plan.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
                 </div>
 
                 {/* Multiple Choice Questions */}
                 <AnimatePresence>
-                  {formData.type === "MultipleChoice" && (
+                  {formData.type === "MULTIPLE_CHOICE" && (
                     <div className="space-y-6 pt-4 border-t border-gray-100">
                       <div className="flex items-center justify-between">
                         <label className="block text-sm font-bold text-gray-900">Questions</label>
@@ -284,11 +354,16 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                 </AnimatePresence>
 
                 <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                  <button type="button" onClick={onClose} className="rounded-xl px-4 py-2 font-semibold text-gray-600 hover:bg-gray-200">
+                  <button type="button" onClick={onClose} disabled={isSaving} className="rounded-xl px-4 py-2 font-semibold text-gray-600 hover:bg-gray-200 disabled:opacity-50">
                       Cancel
                   </button>
-                  <button type="submit" className="flex items-center gap-2 rounded-xl bg-brand-primary px-6 py-2 font-bold text-white transition-all hover:bg-brand-primary/90">
-                      Create Challenge
+                  <button type="submit" disabled={isSaving} className="flex items-center gap-2 rounded-xl bg-brand-primary px-6 py-2 font-bold text-white transition-all hover:bg-brand-primary/90 disabled:opacity-50">
+                    {isSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
+                    {isSaving ? "Creating..." : "Create Challenge"}
                   </button>
                 </div>
               </form>
