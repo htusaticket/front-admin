@@ -15,6 +15,7 @@ import {
   Trophy,
   CheckCircle2,
   ClipboardList,
+  CreditCard,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -27,6 +28,7 @@ import { useAuthStore } from "@/store/auth";
 const allMenuItems = [
   { icon: Home, label: "Dashboard", href: "/dashboard", roles: ["SUPERADMIN", "ADMIN"] },
   { icon: Users, label: "Users", href: "/users", roles: ["SUPERADMIN", "ADMIN"] },
+  { icon: CreditCard, label: "Subscriptions", href: "/subscriptions", roles: ["SUPERADMIN"] },
   { icon: BookOpen, label: "Academy", href: "/academy", roles: ["SUPERADMIN", "ADMIN"] },
   { icon: Calendar, label: "Classes", href: "/classes", roles: ["SUPERADMIN", "ADMIN"] },
   { icon: Briefcase, label: "Jobs", href: "/jobs", roles: ["SUPERADMIN", "ADMIN"] },

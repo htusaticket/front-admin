@@ -48,6 +48,7 @@ interface AdminDashboardActions {
   fetchDashboard: () => Promise<void>;
   fetchNotifications: () => Promise<void>;
   markNotificationAsRead: (id: string) => Promise<void>;
+  markAllNotificationsAsRead: () => Promise<void>;
   clearError: () => void;
 }
 
@@ -120,6 +121,19 @@ export const useAdminDashboardStore = create<AdminDashboardStore>((set) => ({
       }));
     } catch (error) {
       console.error("Error marking notification as read:", error);
+    }
+  },
+
+  markAllNotificationsAsRead: async () => {
+    try {
+      await api.post("/api/admin/dashboard/notifications/read-all");
+      
+      set((state) => ({
+        notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
+        unreadCount: 0,
+      }));
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
     }
   },
 

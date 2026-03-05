@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from "date-fns";
 import { enUS } from "date-fns/locale";
-import { Bell, Menu, UserPlus, BookOpen, FileText, AlertCircle, X, Loader2 } from "lucide-react";
+import { Bell, Menu, UserPlus, BookOpen, FileText, AlertCircle, X, Loader2, CheckCheck } from "lucide-react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -113,7 +113,8 @@ export const Header = () => {
     unreadCount, 
     isLoadingNotifications,
     fetchNotifications, 
-    markNotificationAsRead, 
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
   } = useAdminDashboardStore();
 
   // Fetch notifications on mount
@@ -197,12 +198,24 @@ export const Header = () => {
                   <h3 className="font-display font-bold text-brand-primary">
                     Notifications
                   </h3>
-                  <button
-                    onClick={() => setShowNotifications(false)}
-                    className="rounded-lg p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={markAllNotificationsAsRead}
+                        className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-brand-cyan-dark hover:bg-brand-cyan-dark/10 transition-colors"
+                        title="Mark all as read"
+                      >
+                        <CheckCheck className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Mark all</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowNotifications(false)}
+                      className="rounded-lg p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Notifications List */}

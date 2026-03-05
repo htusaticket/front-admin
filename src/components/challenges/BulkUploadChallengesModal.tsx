@@ -1,9 +1,11 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, Upload, FileSpreadsheet, AlertCircle } from "lucide-react";
+import { X, Check, Upload, FileSpreadsheet, AlertCircle, Loader2 } from "lucide-react";
 import { useState } from "react";
 import * as XLSX from "xlsx";
+
+import { useChallengesStore } from "@/store/challenges";
 
 interface BulkUploadChallengesModalProps {
   isOpen: boolean;
@@ -25,10 +27,13 @@ interface ParsedChallenge {
 }
 
 export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallengesModalProps) {
+  const { bulkCreateChallenges, isSaving } = useChallengesStore();
+  
   const [file, setFile] = useState<File | null>(null);
   const [parsedChallenges, setParsedChallenges] = useState<ParsedChallenge[]>([]);
   const [error, setError] = useState("");
   const [_parsing, setParsing] = useState(false);
+  const [visibleForSkillBuilder, setVisibleForSkillBuilder] = useState(false);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -111,8 +116,37 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
     }
   };
 
-  const handleSubmit = () => {
-    // TODO: Send parsedChallenges to API
+  const handleSubmit = async () => {
+    // Transform parsed challenges to API format
+    const challengesToCreate = parsedChallenges.map(c => {
+      // Map type to correct format
+      const typeMap: Record<string, "AUDIO" | "MULTIPLE_CHOICE" | "WRITING"> = {
+        "Audio": "AUDIO",
+        "MultipleChoice": "MULTIPLE_CHOICE", 
+        "MULTIPLE_CHOICE": "MULTIPLE_CHOICE",
+        "Writing": "WRITING",
+        "WRITING": "WRITING",
+      };
+      
+      return {
+        title: c.title,
+        description: c.description,
+        scheduledDate: c.date,
+        type: typeMap[c.type] || "AUDIO",
+        visibleForSkillBuilder,
+        quizQuestions: c.type === "MultipleChoice" || c.type === "MULTIPLE_CHOICE"
+          ? c.questions?.map(q => ({
+            question: q.text,
+            options: q.options,
+            correctAnswer: q.correctAnswer,
+          }))
+          : undefined,
+      };
+    });
+    
+    await bulkCreateChallenges(challengesToCreate);
+    setParsedChallenges([]);
+    setFile(null);
     onClose();
   };
 
@@ -168,6 +202,26 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
                     {error}
                   </div>
                 )}
+
+                {/* Skill Builder Visibility - applies to all uploaded challenges */}
+                {parsedChallenges.length > 0 && (
+                  <div className="rounded-xl border border-gray-200 p-4 bg-gray-50">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={visibleForSkillBuilder}
+                        onChange={(e) => setVisibleForSkillBuilder(e.target.checked)}
+                        className="h-5 w-5 rounded border-gray-300 text-brand-primary focus:ring-brand-primary/20"
+                      />
+                      <div>
+                        <span className="font-semibold text-gray-900">Visible for Skill Builder</span>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Enable this to make all uploaded challenges accessible for users with the Skill Builder plan.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                )}
                  
                 {/* Preview Table */}
                 {parsedChallenges.length > 0 && (
@@ -221,16 +275,20 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
               </div>
 
               <div className="flex justify-end gap-3 border-t border-gray-100 bg-gray-50 px-6 py-4">
-                <button onClick={onClose} className="rounded-xl px-4 py-2 font-semibold text-gray-600 hover:bg-gray-200">
+                <button onClick={onClose} disabled={isSaving} className="rounded-xl px-4 py-2 font-semibold text-gray-600 hover:bg-gray-200 disabled:opacity-50">
                   Cancel
                 </button>
                 <button 
-                  disabled={parsedChallenges.length === 0}
+                  disabled={parsedChallenges.length === 0 || isSaving}
                   onClick={handleSubmit}
                   className="flex items-center gap-2 rounded-xl bg-brand-primary px-6 py-2 font-bold text-white transition-all hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Check className="h-4 w-4" />
-                  Import Challenges
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4" />
+                  )}
+                  {isSaving ? "Importing..." : "Import Challenges"}
                 </button>
               </div>
 

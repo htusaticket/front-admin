@@ -11,57 +11,67 @@ import {
   ExternalLink,
   CheckCircle,
   Upload,
+  Loader2,
+  AlertCircle,
+  Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { UploadJobsModal } from "@/components/jobs/UploadJobsModal";
-// Mock data
-const jobOffers = [
-  {
-    id: 1,
-    title: "Senior Frontend Developer",
-    company: "TechCorp Inc.",
-    location: "Remote",
-    salary: "$80k - $120k/year",
-    type: "Full-time",
-    description:
-      "We're looking for an experienced Frontend Developer to join our team...",
-  },
-  {
-    id: 2,
-    title: "Customer Success Manager",
-    company: "SaaS Solutions",
-    location: "Hybrid - Buenos Aires",
-    salary: "$50k - $70k/year",
-    type: "Full-time",
-    description:
-      "Join our growing customer success team and help clients achieve their goals...",
-  },
-  {
-    id: 3,
-    title: "English Teacher (Online)",
-    company: "Global Education",
-    location: "Remote",
-    salary: "$25 - $40/hour",
-    type: "Part-time",
-    applied: false,
-    description: "Teach English to students worldwide from the comfort of your home...",
-  },
-  {
-    id: 4,
-    title: "Sales Representative",
-    company: "Marketing Plus",
-    location: "Remote",
-    salary: "$60k - $90k/year",
-    type: "Full-time",
-    applied: false,
-    description: "Drive sales growth and build relationships with key clients...",
-  },
-];
+import { useAuthStore } from "@/store/auth";
+import { useJobsStore, type JobOffer } from "@/store/jobs";
 
 export default function JobsPage() {
-  const [selectedJob, setSelectedJob] = useState(jobOffers[0]);
+  const { user } = useAuthStore();
+  const { 
+    jobs, 
+    isLoading, 
+    isSaving, 
+    error, 
+    fetchJobs, 
+    deleteJob, 
+  } = useJobsStore();
+  
+  const [selectedJob, setSelectedJob] = useState<JobOffer | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  const isSuperAdmin = user?.role === "SUPERADMIN";
+  
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs]);
+  
+  useEffect(() => {
+    if (jobs.length > 0 && !selectedJob) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedJob(jobs[0]);
+    }
+  }, [jobs, selectedJob]);
+  
+  const filteredJobs = jobs.filter(job => 
+    job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    job.company.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
+  
+  const handleDeleteJob = async (jobId: number) => {
+    if (!isSuperAdmin) return;
+    
+    if (confirm("¿Estás seguro de eliminar esta oferta de trabajo?")) {
+      await deleteJob(jobId);
+      if (selectedJob?.id === jobId) {
+        setSelectedJob(jobs[0] || null);
+      }
+    }
+  };
+  
+  if (isLoading && jobs.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -90,6 +100,13 @@ export default function JobsPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="flex items-center gap-2 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600">
+          <AlertCircle className="h-5 w-5 shrink-0" />
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-gray-200 bg-white p-6">
@@ -99,7 +116,7 @@ export default function JobsPage() {
                 Active Job Posts
               </p>
               <p className="mt-1 font-display text-3xl font-bold text-brand-primary">
-                4
+                {jobs.length}
               </p>
             </div>
             <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-brand-cyan-dark/10">
@@ -115,7 +132,7 @@ export default function JobsPage() {
                 Total Applicants
               </p>
               <p className="mt-1 font-display text-3xl font-bold text-brand-primary">
-                128
+                {jobs.reduce((acc, job) => acc + (job.applicationsCount || 0), 0)}
               </p>
             </div>
             <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-green-100">
@@ -131,7 +148,11 @@ export default function JobsPage() {
                 New this Week
               </p>
               <p className="mt-1 font-display text-3xl font-bold text-brand-primary">
-                5
+                {jobs.filter(j => {
+                  const weekAgo = new Date();
+                  weekAgo.setDate(weekAgo.getDate() - 7);
+                  return new Date(j.createdAt) > weekAgo;
+                }).length}
               </p>
             </div>
             <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-purple-100">
@@ -148,6 +169,8 @@ export default function JobsPage() {
           <input
             type="text"
             placeholder="Search jobs..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="h-12 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-4 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
           />
         </div>
@@ -161,141 +184,158 @@ export default function JobsPage() {
         </motion.button>
       </div>
 
-      {/* Job Board */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Job List */}
-        <div className="space-y-4 lg:col-span-1">
-          {jobOffers.map((job) => (
-            <motion.div
-              key={job.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              onClick={() => setSelectedJob(job)}
-              className={`cursor-pointer rounded-2xl border bg-white p-4 shadow-sm transition-all hover:shadow-md ${
-                selectedJob.id === job.id
-                  ? "border-brand-cyan-dark"
-                  : "border-gray-200"
-              }`}
-            >
-              <div className="mb-3 flex items-start justify-between">
-                <h3 className="flex-1 font-bold text-brand-primary">
-                  {job.title}
-                </h3>
-              </div>
-              <p className="mb-2 text-sm font-semibold text-gray-700">
-                {job.company}
-              </p>
-              <div className="space-y-1 text-xs text-gray-600">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-3.5 w-3.5" />
-                  {job.location}
-                </div>
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-3.5 w-3.5" />
-                  {job.salary}
-                </div>
-              </div>
-              <div className="mt-3 flex items-center justify-between">
-                <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                  {job.type}
-                </span>
-                <span className="text-xs font-medium text-gray-500">
-                  Active
-                </span>
-              </div>
-            </motion.div>
-          ))}
+      {filteredJobs.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-gray-200">
+          <Briefcase className="h-12 w-12 text-gray-300 mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900">No hay ofertas de trabajo</h3>
+          <p className="text-sm text-gray-500 mt-1">Crea o sube ofertas para comenzar</p>
         </div>
-
-        {/* Job Detail */}
-        <div className="lg:col-span-2">
-          <motion.div
-            key={selectedJob.id}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
-          >
-            <div className="mb-6">
-              <div className="mb-4 flex items-start justify-between">
-                <div className="flex-1">
-                  <h2 className="font-display text-2xl font-bold text-brand-primary">
-                    {selectedJob.title}
-                  </h2>
-                  <p className="mt-1 text-lg font-semibold text-gray-700">
-                    {selectedJob.company}
+      ) : (
+        <>
+          {/* Job Board */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {/* Job List */}
+            <div className="space-y-4 lg:col-span-1">
+              {filteredJobs.map((job) => (
+                <motion.div
+                  key={job.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  onClick={() => setSelectedJob(job)}
+                  className={`cursor-pointer rounded-2xl border bg-white p-4 shadow-sm transition-all hover:shadow-md ${
+                    selectedJob?.id === job.id
+                      ? "border-brand-cyan-dark"
+                      : "border-gray-200"
+                  }`}
+                >
+                  <div className="mb-3 flex items-start justify-between">
+                    <h3 className="flex-1 font-bold text-brand-primary">
+                      {job.title}
+                    </h3>
+                  </div>
+                  <p className="mb-2 text-sm font-semibold text-gray-700">
+                    {job.company}
                   </p>
-                </div>
-                <button className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-200 transition-colors">
-                  <ExternalLink className="h-4 w-4" />
+                  <div className="space-y-1 text-xs text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {job.location}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="h-3.5 w-3.5" />
+                      {job.salaryRange || "No especificado"}
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                      {job.type}
+                    </span>
+                    <span className="text-xs font-medium text-gray-500">
+                  Active
+                    </span>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Job Detail */}
+            {selectedJob && (
+              <div className="lg:col-span-2">
+                <motion.div
+                  key={selectedJob.id}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+                >
+                  <div className="mb-6">
+                    <div className="mb-4 flex items-start justify-between">
+                      <div className="flex-1">
+                        <h2 className="font-display text-2xl font-bold text-brand-primary">
+                          {selectedJob.title}
+                        </h2>
+                        <p className="mt-1 text-lg font-semibold text-gray-700">
+                          {selectedJob.company}
+                        </p>
+                      </div>
+                      <button className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-200 transition-colors">
+                        <ExternalLink className="h-4 w-4" />
                     View Public Page
-                </button>
-              </div>
+                      </button>
+                    </div>
 
-              <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-gray-400" />
-                  <span>{selectedJob.location}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-gray-400" />
-                  <span>{selectedJob.salary}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-gray-400" />
-                  <span>{selectedJob.type}</span>
-                </div>
-              </div>
-            </div>
+                    <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-gray-400" />
+                        <span>{selectedJob.location}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4 text-gray-400" />
+                        <span>{selectedJob.salaryRange || "No especificado"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Briefcase className="h-4 w-4 text-gray-400" />
+                        <span>{selectedJob.type}</span>
+                      </div>
+                    </div>
+                  </div>
 
-            <div className="mb-6">
-              <h3 className="mb-3 font-display text-lg font-bold text-brand-primary">
+                  <div className="mb-6">
+                    <h3 className="mb-3 font-display text-lg font-bold text-brand-primary">
                 Job Description
-              </h3>
-              <p className="text-gray-700 leading-relaxed">
-                {selectedJob.description}
-              </p>
+                    </h3>
+                    <p className="text-gray-700 leading-relaxed">
+                      {selectedJob.description}
+                    </p>
 
-              <div className="mt-6">
-                <h4 className="mb-2 font-bold text-brand-primary">
+                    {selectedJob.requirements && selectedJob.requirements.length > 0 && (
+                      <div className="mt-6">
+                        <h4 className="mb-2 font-bold text-brand-primary">
                   Requirements:
-                </h4>
-                <ul className="space-y-2 text-sm text-gray-700">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
-                    <span>Fluent English (C1 or higher)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
-                    <span>2+ years of prior experience</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
-                    <span>Exceptional communication skills</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
+                        </h4>
+                        <ul className="space-y-2 text-sm text-gray-700">
+                          {selectedJob.requirements.map((req) => (
+                            <li key={req} className="flex items-start gap-2">
+                              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+                              <span>{req}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
 
-            <div className="flex gap-3 pt-4 border-t border-gray-100">
-              <button
-                className="flex-1 rounded-xl bg-brand-primary px-6 py-3 text-sm font-bold text-white shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary/90"
-              >
+                  <div className="flex gap-3 pt-4 border-t border-gray-100">
+                    <button
+                      className="flex-1 rounded-xl bg-brand-primary px-6 py-3 text-sm font-bold text-white shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary/90"
+                    >
                 Edit Listing
-              </button>
-              <button
-                className="flex-1 rounded-xl border border-gray-200 bg-white px-6 py-3 text-sm font-bold text-gray-700 transition-all hover:border-gray-300 hover:bg-gray-50"
-              >
-                Manage Applications (12)
-              </button>
-              <button
-                className="rounded-xl border border-red-100 bg-red-50 px-6 py-3 text-sm font-bold text-red-600 transition-all hover:bg-red-100"
-              >
-                Close Job
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      </div>
+                    </button>
+                    <button
+                      className="flex-1 rounded-xl border border-gray-200 bg-white px-6 py-3 text-sm font-bold text-gray-700 transition-all hover:border-gray-300 hover:bg-gray-50"
+                    >
+                Manage Applications ({selectedJob.applicationsCount || 0})
+                    </button>
+                    {isSuperAdmin && (
+                      <button
+                        onClick={() => handleDeleteJob(selectedJob.id)}
+                        disabled={isSaving}
+                        className="flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-6 py-3 text-sm font-bold text-red-600 transition-all hover:bg-red-100 disabled:opacity-50"
+                      >
+                        {isSaving ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                Delete
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
       <UploadJobsModal 
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}

@@ -1,17 +1,20 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, BookOpen, FileText, Trash2 } from "lucide-react";
+import { X, Check, BookOpen, FileText, Trash2, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
+
+import { useAcademyStore, type Module } from "@/store/academy";
 
 interface AddModuleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  initialData?: any; // strict type would be better but using any for quick integration as requested
+  initialData?: Module | null;
 }
 
 export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalProps) {
+  const { createModule, updateModule, isSaving } = useAcademyStore();
+  
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -21,6 +24,7 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
     previewUrl: "",
     coverImage: null as File | null,
     pdfFiles: [] as File[],
+    visibleForSkillBuilder: false,
   });
 
   // Sync form data with initialData prop - this is a valid use case for setState in effect
@@ -30,12 +34,13 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
       setFormData({
         title: initialData.title || "",
         description: initialData.description || "",
-        level: initialData.level || "Beginner",
-        status: initialData.status || "Draft",
-        videoUrl: initialData.videoUrl || "",
+        level: "Beginner",
+        status: "Draft",
+        videoUrl: "",
         previewUrl: initialData.image || "",
         coverImage: null,
-        pdfFiles: initialData.pdfFiles || [],
+        pdfFiles: [],
+        visibleForSkillBuilder: initialData.visibleForSkillBuilder || false,
       });
     } else if (isOpen && !initialData) {
       // Reset form when opening in create mode
@@ -49,13 +54,27 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
         previewUrl: "",
         coverImage: null,
         pdfFiles: [],
+        visibleForSkillBuilder: false,
       });
     }
   }, [isOpen, initialData]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Connect to API - formData contains the submitted data
+    
+    const moduleData = {
+      title: formData.title,
+      description: formData.description,
+      image: formData.previewUrl || undefined,
+      visibleForSkillBuilder: formData.visibleForSkillBuilder,
+    };
+    
+    if (initialData) {
+      await updateModule(initialData.id, moduleData);
+    } else {
+      await createModule(moduleData);
+    }
+    
     onClose();
   };
 
@@ -166,6 +185,26 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
                         <option value="Archived">Archived</option>
                       </select>
                     </div>
+                  </div>
+
+                  {/* Skill Builder Visibility */}
+                  <div className="rounded-xl border border-gray-200 p-4 bg-gray-50">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.visibleForSkillBuilder}
+                        onChange={(e) =>
+                          setFormData({ ...formData, visibleForSkillBuilder: e.target.checked })
+                        }
+                        className="h-5 w-5 rounded border-gray-300 text-brand-primary focus:ring-brand-primary/20"
+                      />
+                      <div>
+                        <span className="font-semibold text-gray-900">Visible for Skill Builder</span>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Enable this to make the module accessible for users with the Skill Builder plan.
+                        </p>
+                      </div>
+                    </label>
                   </div>
 
                   <div>
@@ -334,15 +373,21 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
                   <button
                     type="button"
                     onClick={onClose}
-                    className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors"
+                    disabled={isSaving}
+                    className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex items-center gap-2 rounded-xl bg-brand-primary px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary/90"
+                    disabled={isSaving}
+                    className="flex items-center gap-2 rounded-xl bg-brand-primary px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary/90 disabled:opacity-50"
                   >
-                    <Check className="h-4 w-4" />
+                    {isSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4" />
+                    )}
                     {initialData ? "Save Changes" : "Create Module"}
                   </button>
                 </div>

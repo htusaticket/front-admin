@@ -17,12 +17,15 @@ import {
   Phone,
   MapPin,
   CreditCard,
+  UserCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
 import { Pagination } from "@/components/ui/Pagination";
+import { ActivateUserModal } from "@/components/users/ActivateUserModal";
+import { ApproveRejectModal } from "@/components/users/ApproveRejectModal";
 import { EditUserModal } from "@/components/users/EditUserModal";
 import { IssueStrikeModal } from "@/components/users/IssueStrikeModal";
 import { useAuthStore } from "@/store/auth";
@@ -89,6 +92,8 @@ export default function UserDetailPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isStrikeModalOpen, setIsStrikeModalOpen] = useState(false);
+  const [isApproveRejectModalOpen, setIsApproveRejectModalOpen] = useState(false);
+  const [isActivateModalOpen, setIsActivateModalOpen] = useState(false);
   const [notesValue, setNotesValue] = useState("");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
 
@@ -256,6 +261,11 @@ export default function UserDetailPage() {
                 }`}>
                   {user.status}
                 </span>
+                {user.isPunished && (
+                  <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold bg-orange-100 text-orange-800">
+                    Punished
+                  </span>
+                )}
               </div>
               {(user.city || user.country) && (
                 <div className="mt-2 flex items-center gap-1.5 text-sm text-gray-500">
@@ -277,61 +287,75 @@ export default function UserDetailPage() {
             </div>
           </div>
           
-          {/* Actions Menu - Only visible for SUPERADMIN */}
-          {isSuperAdmin && (
-            <div className="relative">
-              <button 
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className={`rounded-xl border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700 transition-colors ${
-                  isMenuOpen ? "bg-gray-100" : "hover:bg-gray-50"
-                }`}
+          {/* Action Buttons for PENDING users */}
+          <div className="flex items-center gap-3">
+            {/* Approve/Reject buttons for PENDING users - visible to ADMIN and SUPERADMIN */}
+            {user.status === "PENDING" && (
+              <button
+                onClick={() => setIsApproveRejectModalOpen(true)}
+                className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white hover:bg-amber-600 transition-colors"
               >
-                <MoreHorizontal className="h-5 w-5" />
+                <UserCheck className="h-4 w-4" />
+                Review Registration
               </button>
+            )}
 
-              {isMenuOpen && (
-                <>
-                  <div className="fixed inset-0 z-30" onClick={() => setIsMenuOpen(false)} />
-                  <div className="absolute right-0 top-full z-40 mt-2 w-48 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
-                    <button 
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        setIsEditModalOpen(true);
-                      }}
-                      className="w-full px-4 py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
-                      Edit Profile
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        setIsStrikeModalOpen(true);
-                      }}
-                      className="w-full px-4 py-2.5 text-left text-sm font-medium text-amber-600 hover:bg-amber-50 transition-colors"
-                    >
-                      Issue Strike
-                    </button>
-                    <div className="border-t border-gray-100 my-1" />
-                    {user.status === "SUSPENDED" ? (
+            {/* Actions Menu - Only visible for SUPERADMIN on active users */}
+            {isSuperAdmin && user.status !== "PENDING" && (
+              <div className="relative">
+                <button 
+                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  className={`rounded-xl border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700 transition-colors ${
+                    isMenuOpen ? "bg-gray-100" : "hover:bg-gray-50"
+                  }`}
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                </button>
+
+                {isMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setIsMenuOpen(false)} />
+                    <div className="absolute right-0 top-full z-40 mt-2 w-48 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
                       <button 
-                        onClick={handleActivateUser}
-                        className="w-full px-4 py-2.5 text-left text-sm font-medium text-green-600 hover:bg-green-50 transition-colors"
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          setIsEditModalOpen(true);
+                        }}
+                        className="w-full px-4 py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                       >
-                        Activate User
+                        Edit Profile
                       </button>
-                    ) : (
                       <button 
-                        onClick={handleSuspendUser}
-                        className="w-full px-4 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          setIsStrikeModalOpen(true);
+                        }}
+                        className="w-full px-4 py-2.5 text-left text-sm font-medium text-amber-600 hover:bg-amber-50 transition-colors"
                       >
-                        Suspend User
+                        Issue Strike
                       </button>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+                      <div className="border-t border-gray-100 my-1" />
+                      {user.status === "SUSPENDED" ? (
+                        <button 
+                          onClick={handleActivateUser}
+                          className="w-full px-4 py-2.5 text-left text-sm font-medium text-green-600 hover:bg-green-50 transition-colors"
+                        >
+                          Reactivate User
+                        </button>
+                      ) : user.status === "ACTIVE" ? (
+                        <button 
+                          onClick={handleSuspendUser}
+                          className="w-full px-4 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          Suspend User
+                        </button>
+                      ) : null}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -589,6 +613,22 @@ export default function UserDetailPage() {
         onClose={() => setIsStrikeModalOpen(false)}
         userId={userId}
         userName={`${user.firstName} ${user.lastName}`}
+      />
+
+      <ApproveRejectModal
+        isOpen={isApproveRejectModalOpen}
+        onClose={() => setIsApproveRejectModalOpen(false)}
+        userId={userId}
+        userName={`${user.firstName} ${user.lastName}`}
+        userEmail={user.email}
+      />
+
+      <ActivateUserModal
+        isOpen={isActivateModalOpen}
+        onClose={() => setIsActivateModalOpen(false)}
+        userId={userId}
+        userName={`${user.firstName} ${user.lastName}`}
+        userEmail={user.email}
       />
     </div>
   );
