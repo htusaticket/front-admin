@@ -77,21 +77,21 @@ const SidebarContent = ({
       {/* Logo */}
       <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-brand-cyan-dark shadow-lg shadow-brand-cyan-dark/30">
+          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-black">
             <Image
-              src="/logo.webp"
-              alt="JFalcon"
-              width={44}
-              height={44}
-              className="h-full w-full object-cover"
+              src="https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/falcon-logo.png"
+              alt="High Ticket English"
+              width={40}
+              height={40}
+              className="h-10 w-10 object-cover object-top"
             />
           </div>
           <div className="flex flex-col">
-            <span className="font-display text-xl font-bold text-brand-primary">
-            JFalcon
+            <span className="font-display text-lg font-bold text-brand-primary leading-tight">
+              High Ticket English
             </span>
             <span className="text-xs font-medium text-gray-500">
-            Admin Panel
+              Admin Panel
             </span>
           </div>
         </div>

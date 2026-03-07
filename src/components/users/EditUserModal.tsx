@@ -24,6 +24,8 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
     lastName: user?.lastName || "",
     email: user?.email || "",
     phone: user?.phone || "",
+    city: user?.city || "",
+    country: user?.country || "",
     role: (user?.role || "USER") as UserRole,
     plan: (user?.plan || "") as UserPlan | "",
     startDate: user?.startDate ? user.startDate.split("T")[0] : "",
@@ -40,6 +42,8 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
         lastName: user.lastName || "",
         email: user.email || "",
         phone: user.phone || "",
+        city: user.city || "",
+        country: user.country || "",
         role: user.role || "USER",
         plan: user.plan || "",
         startDate: user.startDate ? user.startDate.split("T")[0] : "",
@@ -57,6 +61,8 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
       firstName: formData.firstName,
       lastName: formData.lastName,
       phone: formData.phone || undefined,
+      city: formData.city || undefined,
+      country: formData.country || undefined,
       role: formData.role,
       plan: formData.plan || undefined,
       startDate: formData.startDate || undefined,
@@ -187,6 +193,37 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
                       value={formData.phone}
                       onChange={(e) =>
                         setFormData({ ...formData, phone: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="New York"
+                      value={formData.city}
+                      onChange={(e) =>
+                        setFormData({ ...formData, city: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                      Country
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="United States"
+                      value={formData.country}
+                      onChange={(e) =>
+                        setFormData({ ...formData, country: e.target.value })
                       }
                       className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
                     />

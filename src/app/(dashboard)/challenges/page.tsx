@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Plus, Upload, Mic, HelpCircle, Calendar, Circle, Loader2, AlertCircle, Trash2, PenLine } from "lucide-react";
+import { Plus, Upload, Mic, HelpCircle, Calendar, Circle, Loader2, AlertCircle, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 
 import { BulkUploadChallengesModal } from "@/components/challenges/BulkUploadChallengesModal";
@@ -35,8 +35,12 @@ export default function ChallengesPage() {
   const next7Days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
+    // Use local date format YYYY-MM-DD to match backend
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
     return {
-      date: d.toISOString().split("T")[0],
+      date: `${year}-${month}-${day}`,
       dayName: d.toLocaleDateString("en-US", { weekday: "short" }),
       dayNumber: d.getDate(),
     };
@@ -127,16 +131,12 @@ export default function ChallengesPage() {
                 {challenge ? (
                   <div className="flex flex-col items-center gap-1">
                     <div className={`p-1.5 rounded-full ${
-                      challenge.type === "AUDIO" ? "bg-purple-100 text-purple-600" : 
-                        challenge.type === "WRITING" ? "bg-green-100 text-green-600" :
-                          "bg-blue-100 text-blue-600"
+                      challenge.type === "AUDIO" ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"
                     }`}>
-                      {challenge.type === "AUDIO" ? <Mic className="h-4 w-4" /> : 
-                        challenge.type === "WRITING" ? <PenLine className="h-4 w-4" /> :
-                          <HelpCircle className="h-4 w-4" />}
+                      {challenge.type === "AUDIO" ? <Mic className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />}
                     </div>
                     <span className="text-[10px] font-medium text-gray-600 truncate w-full text-center px-1">
-                      {challenge.type}
+                      {challenge.type === "AUDIO" ? "Audio" : "Quiz"}
                     </span>
                   </div>
                 ) : (
@@ -168,13 +168,9 @@ export default function ChallengesPage() {
             >
               <div className="flex items-start gap-4">
                 <div className={`mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                  challenge.type === "AUDIO" ? "bg-purple-100 text-purple-600" : 
-                    challenge.type === "WRITING" ? "bg-green-100 text-green-600" :
-                      "bg-blue-100 text-blue-600"
+                  challenge.type === "AUDIO" ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"
                 }`}>
-                  {challenge.type === "AUDIO" && <Mic className="h-5 w-5" />}
-                  {challenge.type === "MULTIPLE_CHOICE" && <HelpCircle className="h-5 w-5" />}
-                  {challenge.type === "WRITING" && <PenLine className="h-5 w-5" />}
+                  {challenge.type === "AUDIO" ? <Mic className="h-5 w-5" /> : <HelpCircle className="h-5 w-5" />}
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900">{challenge.title}</h3>
@@ -192,9 +188,6 @@ export default function ChallengesPage() {
                   {challenge.scheduledDate}
                 </div>
                 <div className="flex gap-2">
-                  <button className="text-sm font-semibold text-gray-400 hover:text-brand-primary">
-                        Edit
-                  </button>
                   {isSuperAdmin && (
                     <button 
                       onClick={() => handleDeleteChallenge(challenge)}

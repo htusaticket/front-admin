@@ -14,86 +14,88 @@ import {
   Save,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 import { useAuthStore } from "@/store/auth";
 import { useSystemConfigStore } from "@/store/systemConfig";
+
+// Type for config values needed for form
+interface ConfigFormValues {
+  lateCancellationHours: number;
+  maxStrikesForPunishment: number;
+  punishmentDurationDays: number;
+}
+
+// Helper to get initial form values from config
+const getFormValuesFromConfig = (config: ConfigFormValues | null) => ({
+  lateCancellationHours: config ? String(config.lateCancellationHours) : "2",
+  maxStrikesForPunishment: config ? String(config.maxStrikesForPunishment) : "3",
+  punishmentDurationDays: config ? String(config.punishmentDurationDays) : "7",
+});
 
 export default function SettingsPage() {
   const { user } = useAuthStore();
   const { config, isLoading, isSaving, fetchConfig, updateConfig } = useSystemConfigStore();
   const isSuperAdmin = user?.role === "SUPERADMIN";
   
-  // Local state for form values
-  const [formValues, setFormValues] = useState({
-    lateCancellationHours: 2,
-    maxStrikesForPunishment: 3,
-    punishmentDurationDays: 7,
-  });
-
-  // Track if values have changed
-  const [hasChanges, setHasChanges] = useState(false);
+  // Local state for form values (Strike Policy only - needs "Save" button)
+  // Initialize with config values if available, otherwise defaults
+  const [formValues, setFormValues] = useState(() => getFormValuesFromConfig(config));
+  const [isInitialized, setIsInitialized] = useState(!!config);
   
-  // Module visibility state
-  const [modules, setModules] = useState({
-    jobsModule: true,
-    academyModule: true,
-  });
-  const [modulesSaving, setModulesSaving] = useState(false);
+  // Track which module is currently being saved
+  const [savingModule, setSavingModule] = useState<string | null>(null);
 
   // Fetch config on mount
   useEffect(() => {
     fetchConfig();
   }, [fetchConfig]);
 
-  // Update form values when config loads
+  // Initialize form values once config is loaded (only runs once)
   useEffect(() => {
-    if (config) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setFormValues({
-        lateCancellationHours: config.lateCancellationHours,
-        maxStrikesForPunishment: config.maxStrikesForPunishment,
-        punishmentDurationDays: config.punishmentDurationDays,
-      });
-      setModules({
-        jobsModule: config.jobBoardEnabled,
-        academyModule: config.academyEnabled,
-      });
+    if (config && !isInitialized) {
+      setIsInitialized(true);
     }
-  }, [config]);
+  }, [config, isInitialized]);
 
-  // Check for changes
+  // Re-initialize form when isInitialized changes from false to true
   useEffect(() => {
-    if (config) {
-      const changed = 
-        formValues.lateCancellationHours !== config.lateCancellationHours ||
-        formValues.maxStrikesForPunishment !== config.maxStrikesForPunishment ||
-        formValues.punishmentDurationDays !== config.punishmentDurationDays;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setHasChanges(changed);
+    if (isInitialized && config) {
+      setFormValues(getFormValuesFromConfig(config));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInitialized]);
+
+  // Calculate hasChanges using useMemo instead of useEffect + setState
+  const hasChanges = useMemo(() => {
+    if (!config) return false;
+    return (
+      parseInt(formValues.lateCancellationHours) !== config.lateCancellationHours ||
+      parseInt(formValues.maxStrikesForPunishment) !== config.maxStrikesForPunishment ||
+      parseInt(formValues.punishmentDurationDays) !== config.punishmentDurationDays
+    );
   }, [formValues, config]);
 
-  const handleInputChange = (field: keyof typeof formValues, value: number) => {
+  const handleInputChange = (field: keyof typeof formValues, value: string) => {
     setFormValues(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSavePolicy = async () => {
-    await updateConfig(formValues);
-    setHasChanges(false);
+    await updateConfig({
+      lateCancellationHours: parseInt(formValues.lateCancellationHours) || 2,
+      maxStrikesForPunishment: parseInt(formValues.maxStrikesForPunishment) || 3,
+      punishmentDurationDays: parseInt(formValues.punishmentDurationDays) || 7,
+    });
   };
 
-  const toggleModule = async (key: keyof typeof modules) => {
-    const newValue = !modules[key];
-    setModules(prev => ({ ...prev, [key]: newValue }));
-    setModulesSaving(true);
+  const toggleModule = async (moduleKey: "jobBoardEnabled" | "strikesEnabled") => {
+    if (!config) return;
     
-    const updateData = key === "jobsModule" 
-      ? { jobBoardEnabled: newValue }
-      : { academyEnabled: newValue };
+    const currentValue = config[moduleKey];
+    setSavingModule(moduleKey);
     
-    await updateConfig(updateData);
-    setModulesSaving(false);
+    await updateConfig({ [moduleKey]: !currentValue });
+    setSavingModule(null);
   };
 
   return (
@@ -163,24 +165,36 @@ export default function SettingsPage() {
                 <p className="text-xs text-gray-500">Enable access to job opportunities</p>
               </div>
               <button 
-                onClick={() => toggleModule("jobsModule")}
-                disabled={modulesSaving}
-                className={`transition-colors disabled:opacity-50 ${modules.jobsModule ? "text-brand-primary" : "text-gray-300"}`}
+                onClick={() => toggleModule("jobBoardEnabled")}
+                disabled={savingModule !== null}
+                className={`transition-colors disabled:opacity-50 ${config?.jobBoardEnabled ? "text-brand-primary" : "text-gray-300"}`}
               >
-                {modules.jobsModule ? <ToggleRight className="h-8 w-8" /> : <ToggleLeft className="h-8 w-8" />}
+                {savingModule === "jobBoardEnabled" ? (
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                ) : config?.jobBoardEnabled ? (
+                  <ToggleRight className="h-8 w-8" />
+                ) : (
+                  <ToggleLeft className="h-8 w-8" />
+                )}
               </button>
             </div>
             <div className="flex items-center justify-between rounded-xl border border-gray-100 p-4">
               <div>
-                <p className="font-semibold text-gray-900">Academy Module</p>
-                <p className="text-xs text-gray-500">Enable learning materials</p>
+                <p className="font-semibold text-gray-900">Strike System</p>
+                <p className="text-xs text-gray-500">Enable strike tracking for absences</p>
               </div>
               <button 
-                onClick={() => toggleModule("academyModule")}
-                disabled={modulesSaving}
-                className={`transition-colors disabled:opacity-50 ${modules.academyModule ? "text-brand-primary" : "text-gray-300"}`}
+                onClick={() => toggleModule("strikesEnabled")}
+                disabled={savingModule !== null}
+                className={`transition-colors disabled:opacity-50 ${config?.strikesEnabled ? "text-brand-primary" : "text-gray-300"}`}
               >
-                {modules.academyModule ? <ToggleRight className="h-8 w-8" /> : <ToggleLeft className="h-8 w-8" />}
+                {savingModule === "strikesEnabled" ? (
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                ) : config?.strikesEnabled ? (
+                  <ToggleRight className="h-8 w-8" />
+                ) : (
+                  <ToggleLeft className="h-8 w-8" />
+                )}
               </button>
             </div>
           </div>
@@ -267,7 +281,7 @@ export default function SettingsPage() {
                   <input 
                     type="number" 
                     value={formValues.lateCancellationHours}
-                    onChange={(e) => handleInputChange("lateCancellationHours", parseInt(e.target.value) || 0)}
+                    onChange={(e) => handleInputChange("lateCancellationHours", e.target.value)}
                     min={1}
                     max={72}
                     className="w-full rounded-xl border border-gray-200 p-3 pr-16 text-sm outline-none focus:border-brand-primary font-medium"
@@ -283,7 +297,7 @@ export default function SettingsPage() {
                   <input 
                     type="number" 
                     value={formValues.maxStrikesForPunishment}
-                    onChange={(e) => handleInputChange("maxStrikesForPunishment", parseInt(e.target.value) || 0)}
+                    onChange={(e) => handleInputChange("maxStrikesForPunishment", e.target.value)}
                     min={1}
                     max={10}
                     className="w-full rounded-xl border border-gray-200 p-3 pr-16 text-sm outline-none focus:border-brand-primary font-medium"
@@ -299,7 +313,7 @@ export default function SettingsPage() {
                   <input 
                     type="number" 
                     value={formValues.punishmentDurationDays}
-                    onChange={(e) => handleInputChange("punishmentDurationDays", parseInt(e.target.value) || 0)}
+                    onChange={(e) => handleInputChange("punishmentDurationDays", e.target.value)}
                     min={1}
                     max={90}
                     className="w-full rounded-xl border border-gray-200 p-3 pr-16 text-sm outline-none focus:border-brand-primary font-medium"
