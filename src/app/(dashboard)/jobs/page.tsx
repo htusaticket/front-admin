@@ -14,9 +14,11 @@ import {
   Loader2,
   AlertCircle,
   Trash2,
+  Plus,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
+import { CreateJobModal } from "@/components/jobs/CreateJobModal";
 import { UploadJobsModal } from "@/components/jobs/UploadJobsModal";
 import { useAuthStore } from "@/store/auth";
 import { useJobsStore, type JobOffer } from "@/store/jobs";
@@ -34,6 +36,7 @@ export default function JobsPage() {
   
   const [selectedJob, setSelectedJob] = useState<JobOffer | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   
   const isSuperAdmin = user?.role === "SUPERADMIN";
@@ -93,8 +96,11 @@ export default function JobsPage() {
             <Upload className="h-4 w-4" />
             Upload Offers
           </button>
-          <button className="flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-brand-primary/90 hover:shadow-lg hover:shadow-brand-primary/20">
-            <Briefcase className="h-4 w-4" />
+          <button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-brand-primary/90 hover:shadow-lg hover:shadow-brand-primary/20"
+          >
+            <Plus className="h-4 w-4" />
             Post New Job
           </button>
         </div>
@@ -339,6 +345,10 @@ export default function JobsPage() {
       <UploadJobsModal 
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
+      />
+      <CreateJobModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
       />
     </div>
   );

@@ -11,6 +11,25 @@ export interface QuizQuestion {
   correctAnswer: string;
 }
 
+// Backend response interface
+interface BackendChallenge {
+  id: number;
+  title: string;
+  instructions: string;
+  type: "AUDIO" | "MULTIPLE_CHOICE" | "WRITING";
+  date: string; // Backend uses 'date'
+  questions?: QuizQuestion[];
+  audioUrl?: string;
+  points: number;
+  isActive: boolean;
+  visibleForSkillBuilder: boolean;
+  submissionsCount: number;
+  pendingSubmissions: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Frontend interface
 export interface Challenge {
   id: number;
   title: string;
@@ -27,6 +46,32 @@ export interface Challenge {
   pendingSubmissions: number;
   createdAt: string;
   updatedAt: string;
+}
+
+// Transform backend response to frontend format
+const transformChallenge = (backend: BackendChallenge): Challenge => ({
+  id: backend.id,
+  title: backend.title,
+  description: backend.instructions,
+  type: backend.type,
+  scheduledDate: backend.date.split("T")[0], // Normalize to YYYY-MM-DD
+  quizQuestions: backend.questions,
+  audioUrl: backend.audioUrl,
+  points: backend.points,
+  isActive: backend.isActive,
+  visibleForSkillBuilder: backend.visibleForSkillBuilder,
+  submissionsCount: backend.submissionsCount,
+  pendingSubmissions: backend.pendingSubmissions,
+  createdAt: backend.createdAt,
+  updatedAt: backend.updatedAt,
+});
+
+interface BackendChallengesListResponse {
+  challenges: BackendChallenge[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export interface ChallengesListResponse {
@@ -117,14 +162,14 @@ export const useChallengesStore = create<ChallengesStore>((set, get) => ({
       if (params?.endDate) queryParams.append("endDate", params.endDate);
       if (params?.search) queryParams.append("search", params.search);
 
-      const response = await api.get<ApiResponse<ChallengesListResponse>>(
+      const response = await api.get<ApiResponse<BackendChallengesListResponse>>(
         `/api/admin/challenges?${queryParams.toString()}`,
       );
       
       const data = response.data.data;
       
       set({
-        challenges: data.challenges,
+        challenges: data.challenges.map(transformChallenge),
         total: data.total,
         page: data.page,
         totalPages: data.totalPages,
@@ -141,11 +186,11 @@ export const useChallengesStore = create<ChallengesStore>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      const response = await api.get<ApiResponse<Challenge>>(
+      const response = await api.get<ApiResponse<BackendChallenge>>(
         `/api/admin/challenges/${id}`,
       );
       
-      set({ selectedChallenge: response.data.data, isLoading: false });
+      set({ selectedChallenge: transformChallenge(response.data.data), isLoading: false });
     } catch (error) {
       const errorMessage = getErrorMessage(error);
       set({ error: errorMessage, isLoading: false });

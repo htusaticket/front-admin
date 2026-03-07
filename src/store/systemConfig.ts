@@ -7,6 +7,7 @@ import type { ApiResponse } from "@/types/admin";
 // ==================== TYPES ====================
 export interface SystemConfig {
   id: string;
+  strikesEnabled: boolean;
   maxStrikesForPunishment: number;
   punishmentDurationDays: number;
   lateCancellationHours: number;
@@ -17,11 +18,18 @@ export interface SystemConfig {
 }
 
 export interface UpdateSystemConfigDto {
+  strikesEnabled?: boolean;
   maxStrikesForPunishment?: number;
   punishmentDurationDays?: number;
   lateCancellationHours?: number;
   jobBoardEnabled?: boolean;
   academyEnabled?: boolean;
+}
+
+// Response type for update
+interface UpdateConfigResponse {
+  config: SystemConfig;
+  message: string;
 }
 
 // ==================== STATE ====================
@@ -72,11 +80,12 @@ export const useSystemConfigStore = create<SystemConfigStore>((set) => ({
     set({ isSaving: true, error: null });
 
     try {
-      const response = await api.patch<ApiResponse<SystemConfig>>(
+      const response = await api.patch<ApiResponse<UpdateConfigResponse>>(
         "/api/admin/system-config",
         data,
       );
-      set({ config: response.data.data, isSaving: false });
+      // Backend returns { config, message } so we extract config
+      set({ config: response.data.data.config, isSaving: false });
       toast.success("Configuration updated successfully");
       return true;
     } catch (error) {

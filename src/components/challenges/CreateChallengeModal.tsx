@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Trash2, Mic, HelpCircle, Loader2, PenLine } from "lucide-react";
+import { X, Plus, Trash2, Mic, HelpCircle, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 import { useChallengesStore } from "@/store/challenges";
@@ -25,10 +25,9 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
     title: "",
     description: "",
     date: "",
-    type: "AUDIO" as "AUDIO" | "MULTIPLE_CHOICE" | "WRITING",
+    type: "AUDIO" as "AUDIO" | "MULTIPLE_CHOICE",
     visibleForSkillBuilder: false,
     audioUrl: "",
-    writingPrompt: "",
     questions: [
       { id: 1, text: "", options: ["", "", ""], correctAnswer: "" },
     ] as Question[],
@@ -108,7 +107,6 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
       type: formData.type,
       visibleForSkillBuilder: formData.visibleForSkillBuilder,
       audioUrl: formData.type === "AUDIO" ? formData.audioUrl : undefined,
-      writingPrompt: formData.type === "WRITING" ? formData.writingPrompt : undefined,
       quizQuestions: formData.type === "MULTIPLE_CHOICE" 
         ? formData.questions.map(q => ({
           question: q.text,
@@ -128,7 +126,6 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
       type: "AUDIO",
       visibleForSkillBuilder: false,
       audioUrl: "",
-      writingPrompt: "",
       questions: [{ id: 1, text: "", options: ["", "", ""], correctAnswer: "" }],
     });
     
@@ -158,7 +155,7 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                 {/* Type Selection */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700">Challenge Type</label>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
                       onClick={() => setFormData({...formData, type: "AUDIO"})}
@@ -182,18 +179,6 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                     >
                       <HelpCircle className="h-4 w-4" />
                          Quiz
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData({...formData, type: "WRITING"})}
-                      className={`flex items-center justify-center gap-2 rounded-xl border p-3 transition-all ${
-                        formData.type === "WRITING" 
-                          ? "border-brand-primary bg-brand-primary/5 text-brand-primary font-bold" 
-                          : "border-gray-200 hover:bg-gray-50 text-gray-600"
-                      }`}
-                    >
-                      <PenLine className="h-4 w-4" />
-                         Writing
                     </button>
                   </div>
                 </div>
