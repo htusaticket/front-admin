@@ -138,14 +138,18 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       });
     } catch (error) {
       const code = getErrorCode(error) as AuthErrorCode | undefined;
+      
+      // Verificar si es error 401 (unauthorized)
+      const is401Error = (error as { response?: { status?: number } })?.response?.status === 401;
 
-      if (code === "INVALID_TOKEN" || code === "ACCOUNT_SUSPENDED" || code === "ACCOUNT_PENDING") {
+      if (is401Error || code === "INVALID_TOKEN" || code === "ACCOUNT_SUSPENDED" || code === "ACCOUNT_PENDING") {
         get().logout();
       }
 
       set({
         isLoading: false,
         errorCode: code || null,
+        isAuthenticated: false,
       });
 
       throw error;
