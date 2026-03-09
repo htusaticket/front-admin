@@ -49,7 +49,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     // SUPERADMIN sees weekly stats, others see daily
-    fetchDashboard(isSuperAdmin ? 'week' : 'today');
+    fetchDashboard(isSuperAdmin ? "week" : "today");
   }, [fetchDashboard, isSuperAdmin]);
 
   // Get user display name

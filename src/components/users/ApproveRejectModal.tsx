@@ -131,11 +131,11 @@ export function ApproveRejectModal({
                   </div>
                   <div>
                     <h2 className="font-display text-lg font-bold text-gray-900">
-                      {mode === "reject" 
-                        ? "Reject Registration" 
-                        : mode === "approve" 
-                        ? "Assign Plan" 
-                        : "Pending Registration"}
+                      {mode === "reject"
+                        ? "Reject Registration"
+                        : mode === "approve"
+                          ? "Assign Plan"
+                          : "Pending Registration"}
                     </h2>
                     <p className="text-sm text-gray-500">{userName}</p>
                   </div>

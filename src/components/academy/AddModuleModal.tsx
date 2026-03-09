@@ -73,7 +73,7 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
     
     // Only add image if URL is provided and looks like a valid URL
     const trimmedUrl = formData.imageUrl.trim();
-    if (trimmedUrl && (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://'))) {
+    if (trimmedUrl && (trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://"))) {
       moduleData.image = trimmedUrl;
     }
     
@@ -230,7 +230,7 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
                       className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
                     />
                     {/* Image Preview */}
-                    {formData.imageUrl && (formData.imageUrl.startsWith('http://') || formData.imageUrl.startsWith('https://')) && (
+                    {formData.imageUrl && (formData.imageUrl.startsWith("http://") || formData.imageUrl.startsWith("https://")) && (
                       <div className="mt-3">
                         {!imagePreviewError ? (
                           <div className="relative mx-auto aspect-video w-full max-w-sm overflow-hidden rounded-lg border border-gray-200 shadow-sm">

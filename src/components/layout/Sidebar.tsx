@@ -207,7 +207,12 @@ export const Sidebar = () => {
     <>
       {/* Desktop Sidebar */}
       <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 flex-col border-r border-gray-200 bg-white lg:flex">
-        <SidebarContent pathname={pathname} onLogout={handleLogout} userRole={userRole} jobBoardEnabled={jobBoardEnabled} />
+        <SidebarContent
+          pathname={pathname}
+          onLogout={handleLogout}
+          userRole={userRole}
+          jobBoardEnabled={jobBoardEnabled}
+        />
       </aside>
 
       {/* Mobile Sidebar */}

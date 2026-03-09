@@ -40,7 +40,10 @@ interface UsersActions {
   updateUserStatus: (userId: string, data: UpdateStatusPayload) => Promise<{ success: boolean; message?: string }>;
   updateUserNotes: (userId: string, data: UpdateNotesPayload) => Promise<{ success: boolean; message?: string }>;
   issueStrike: (userId: string, data: IssueStrikePayload) => Promise<{ success: boolean; message?: string }>;
-  approveRegistration: (userId: string, data: ApproveRegistrationPayload) => Promise<{ success: boolean; message?: string }>;
+  approveRegistration: (
+    userId: string,
+    data: ApproveRegistrationPayload,
+  ) => Promise<{ success: boolean; message?: string }>;
   rejectRegistration: (
     userId: string,
     data: RejectRegistrationPayload,
