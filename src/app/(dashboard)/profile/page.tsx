@@ -52,6 +52,7 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    email: "",
     phone: "",
     city: "",
     country: "",
@@ -76,6 +77,7 @@ export default function ProfilePage() {
       setFormData({
         firstName: data?.firstName || "",
         lastName: data?.lastName || "",
+        email: data?.email || "",
         phone: data?.phone || "",
         city: data?.city || "",
         country: data?.country || "",
@@ -144,6 +146,7 @@ export default function ProfilePage() {
       setFormData({
         firstName: profileData.firstName || "",
         lastName: profileData.lastName || "",
+        email: profileData.email || "",
         phone: profileData.phone || "",
         city: profileData.city || "",
         country: profileData.country || "",
@@ -347,10 +350,24 @@ export default function ProfilePage() {
                     <label className="flex items-center text-sm font-medium text-gray-700">
                       <Mail className="w-4 h-4 mr-2" />
                       Email
+                      {profileData.role === "SUPERADMIN" && isEditing && (
+                        <span className="ml-2 text-xs text-brand-primary">(editable)</span>
+                      )}
                     </label>
-                    <p className="text-sm py-2.5 px-4 bg-gray-50 rounded-xl text-gray-900">
-                      {profileData.email}
-                    </p>
+                    {isEditing && profileData.role === "SUPERADMIN" ? (
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                          setFormData({ ...formData, email: e.target.value })
+                        }
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary"
+                      />
+                    ) : (
+                      <p className="text-sm py-2.5 px-4 bg-gray-50 rounded-xl text-gray-900">
+                        {profileData.email}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">

@@ -16,13 +16,15 @@ import {
   CheckCircle2,
   ClipboardList,
   CreditCard,
+  AlertCircle,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
 import { useAuthStore } from "@/store/auth";
+import { useSystemConfigStore } from "@/store/systemConfig";
 
 // Menu items with role-based visibility
 const allMenuItems = [
@@ -31,11 +33,11 @@ const allMenuItems = [
   { icon: CreditCard, label: "Subscriptions", href: "/subscriptions", roles: ["SUPERADMIN"] },
   { icon: BookOpen, label: "Academy", href: "/academy", roles: ["SUPERADMIN", "ADMIN"] },
   { icon: Calendar, label: "Classes", href: "/classes", roles: ["SUPERADMIN", "ADMIN"] },
-  { icon: Briefcase, label: "Jobs", href: "/jobs", roles: ["SUPERADMIN", "ADMIN"] },
+  { icon: Briefcase, label: "Jobs", href: "/jobs", roles: ["SUPERADMIN", "ADMIN", "JOB_UPLOADER"] },
   { icon: Trophy, label: "Challenges", href: "/challenges", roles: ["SUPERADMIN", "ADMIN"] },
   { icon: CheckCircle2, label: "Corrections", href: "/corrections", roles: ["SUPERADMIN", "ADMIN"] },
   { icon: ClipboardList, label: "Audit", href: "/audit", roles: ["SUPERADMIN"] },
-  { icon: User, label: "My Profile", href: "/profile", roles: ["SUPERADMIN", "ADMIN"] },
+  { icon: User, label: "My Profile", href: "/profile", roles: ["SUPERADMIN", "ADMIN", "JOB_UPLOADER"] },
   { icon: Settings, label: "Configuration", href: "/settings", roles: ["SUPERADMIN"] },
 ];
 
@@ -63,14 +65,20 @@ const SidebarContent = ({
   onClose,
   onLogout,
   userRole,
+  jobBoardEnabled,
 }: {
   pathname: string;
   onClose?: () => void;
   onLogout: () => void;
   userRole: string;
+  jobBoardEnabled: boolean;
 }) => {
   // Filter menu items based on user role
   const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
+  
+  // Check if JOB_UPLOADER and jobs are disabled
+  const isJobUploader = userRole === "JOB_UPLOADER";
+  const showJobsDisabledMessage = isJobUploader && !jobBoardEnabled;
   
   return (
     <div className="flex h-full flex-col p-6">
@@ -80,7 +88,7 @@ const SidebarContent = ({
           <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-black">
             <Image
               src="https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/falcon-logo.png"
-              alt="High Ticket English"
+              alt="High Ticket USA"
               width={40}
               height={40}
               className="h-10 w-10 object-cover object-top"
@@ -88,7 +96,7 @@ const SidebarContent = ({
           </div>
           <div className="flex flex-col">
             <span className="font-display text-lg font-bold text-brand-primary leading-tight">
-              High Ticket English
+              High Ticket USA
             </span>
             <span className="text-xs font-medium text-gray-500">
               Admin Panel
@@ -104,6 +112,21 @@ const SidebarContent = ({
           </button>
         )}
       </div>
+
+      {/* Jobs Disabled Message for JOB_UPLOADER */}
+      {showJobsDisabledMessage && (
+        <div className="mb-6 rounded-xl bg-amber-50 border border-amber-200 p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800">Jobs Module Disabled</p>
+              <p className="text-xs text-amber-700 mt-1">
+                The job board is currently disabled by the administrator. You cannot manage jobs at this time.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1.5">
@@ -161,20 +184,35 @@ export const Sidebar = () => {
   const { isOpen, setIsOpen } = useSidebar();
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
+  const { config, fetchConfig } = useSystemConfigStore();
   
   // Use user role from store, fallback to cookie, then to SUPERADMIN (safest default for display)
   const userRole = user?.role || Cookies.get("userRole") || "SUPERADMIN";
+  
+  // Fetch system config on mount for JOB_UPLOADER role check
+  useEffect(() => {
+    if (userRole === "JOB_UPLOADER") {
+      fetchConfig();
+    }
+  }, [userRole, fetchConfig]);
 
   const handleLogout = () => {
     logout();
     router.push("/login");
   };
+  
+  const jobBoardEnabled = config?.jobBoardEnabled ?? true;
 
   return (
     <>
       {/* Desktop Sidebar */}
       <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 flex-col border-r border-gray-200 bg-white lg:flex">
-        <SidebarContent pathname={pathname} onLogout={handleLogout} userRole={userRole} />
+        <SidebarContent
+          pathname={pathname}
+          onLogout={handleLogout}
+          userRole={userRole}
+          jobBoardEnabled={jobBoardEnabled}
+        />
       </aside>
 
       {/* Mobile Sidebar */}
@@ -202,6 +240,7 @@ export const Sidebar = () => {
                 onClose={() => setIsOpen(false)}
                 onLogout={handleLogout}
                 userRole={userRole}
+                jobBoardEnabled={jobBoardEnabled}
               />
             </motion.aside>
           </>

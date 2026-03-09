@@ -17,7 +17,8 @@ export function middleware(request: NextRequest) {
   // Rutas protegidas del admin (requieren token + rol admin)
   const protectedPaths = [
     "/dashboard", 
-    "/users", 
+    "/users",
+    "/subscriptions",
     "/academy", 
     "/classes", 
     "/jobs", 
@@ -36,7 +37,7 @@ export function middleware(request: NextRequest) {
 
   // 2. Con token pero sin rol de admin → mostrar error (o redirigir a login)
   if (token && isProtectedPath) {
-    if (userRole !== "ADMIN" && userRole !== "SUPERADMIN") {
+    if (userRole !== "ADMIN" && userRole !== "SUPERADMIN" && userRole !== "JOB_UPLOADER") {
       // Limpiar cookies y redirigir a login
       const response = NextResponse.redirect(new URL("/login", request.url));
       response.cookies.delete("accessToken");
@@ -44,12 +45,23 @@ export function middleware(request: NextRequest) {
       response.cookies.delete("userRole");
       return response;
     }
+    
+    // JOB_UPLOADER can only access /jobs and /profile
+    if (userRole === "JOB_UPLOADER") {
+      const allowedForJobUploader = ["/jobs", "/profile"];
+      const isAllowedPath = allowedForJobUploader.some(path => pathname === path || pathname.startsWith(`${path}/`));
+      if (!isAllowedPath) {
+        return NextResponse.redirect(new URL("/jobs", request.url));
+      }
+    }
   }
 
   // 3. Con token, admin activo, intentando acceder a login o root → dashboard
-  if (token && userStatus === "ACTIVE" && (userRole === "ADMIN" || userRole === "SUPERADMIN")) {
+  if (token && userStatus === "ACTIVE" && (userRole === "ADMIN" || userRole === "SUPERADMIN" || userRole === "JOB_UPLOADER")) {
     if (isPublicAuthPath || pathname === "/") {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      // JOB_UPLOADER goes to /jobs, others go to /dashboard
+      const redirectPath = userRole === "JOB_UPLOADER" ? "/jobs" : "/dashboard";
+      return NextResponse.redirect(new URL(redirectPath, request.url));
     }
   }
 
@@ -71,6 +83,7 @@ export const config = {
     "/",
     "/dashboard/:path*",
     "/users/:path*",
+    "/subscriptions/:path*",
     "/academy/:path*",
     "/classes/:path*",
     "/jobs/:path*",

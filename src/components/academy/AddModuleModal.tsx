@@ -20,12 +20,11 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
     description: "",
     level: "Beginner",
     status: "Draft",
-    videoUrl: "",
-    previewUrl: "",
-    coverImage: null as File | null,
+    imageUrl: "",
     pdfFiles: [] as File[],
     visibleForSkillBuilder: false,
   });
+  const [imagePreviewError, setImagePreviewError] = useState(false);
 
   // Sync form data with initialData prop - this is a valid use case for setState in effect
   useEffect(() => {
@@ -36,12 +35,11 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
         description: initialData.description || "",
         level: "Beginner",
         status: "Draft",
-        videoUrl: "",
-        previewUrl: initialData.image || "",
-        coverImage: null,
+        imageUrl: initialData.image || "",
         pdfFiles: [],
         visibleForSkillBuilder: initialData.visibleForSkillBuilder || false,
       });
+      setImagePreviewError(false);
     } else if (isOpen && !initialData) {
       // Reset form when opening in create mode
        
@@ -50,24 +48,34 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
         description: "",
         level: "Beginner",
         status: "Draft",
-        videoUrl: "",
-        previewUrl: "",
-        coverImage: null,
+        imageUrl: "",
         pdfFiles: [],
         visibleForSkillBuilder: false,
       });
+      setImagePreviewError(false);
     }
   }, [isOpen, initialData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const moduleData = {
+    // Only include image if it has a valid URL value
+    const moduleData: {
+      title: string;
+      description: string;
+      visibleForSkillBuilder: boolean;
+      image?: string;
+    } = {
       title: formData.title,
       description: formData.description,
-      image: formData.previewUrl || undefined,
       visibleForSkillBuilder: formData.visibleForSkillBuilder,
     };
+    
+    // Only add image if URL is provided and looks like a valid URL
+    const trimmedUrl = formData.imageUrl.trim();
+    if (trimmedUrl && (trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://"))) {
+      moduleData.image = trimmedUrl;
+    }
     
     if (initialData) {
       await updateModule(initialData.id, moduleData);
@@ -209,81 +217,38 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
 
                   <div>
                     <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                      Video URL (Embedded)
+                      Cover Image URL <span className="text-gray-400 font-normal">(optional)</span>
                     </label>
                     <input
                       type="url"
-                      placeholder="https://www.youtube.com/embed/..."
-                      value={formData.videoUrl}
-                      onChange={(e) =>
-                        setFormData({ ...formData, videoUrl: e.target.value })
-                      }
+                      placeholder="https://example.com/image.jpg"
+                      value={formData.imageUrl}
+                      onChange={(e) => {
+                        setFormData({ ...formData, imageUrl: e.target.value });
+                        setImagePreviewError(false);
+                      }}
                       className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
                     />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Provide a direct link or embed URL for the module&apos;s main video.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                      Cover Image
-                    </label>
-                    <div 
-                      className={`relative flex items-center justify-center rounded-xl border-2 border-dashed p-6 transition-all ${
-                        formData.previewUrl 
-                          ? "border-brand-primary/20 bg-brand-primary/5" 
-                          : "border-gray-200 hover:border-brand-primary/50 hover:bg-gray-50"
-                      }`}
-                    >
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            const file = e.target.files[0];
-                            // Revoke previous object URL if it exists
-                            if (formData.previewUrl && formData.coverImage) {
-                              URL.revokeObjectURL(formData.previewUrl);
-                            }
-                            setFormData({ 
-                              ...formData, 
-                              coverImage: file,
-                              previewUrl: URL.createObjectURL(file),
-                            });
-                          }
-                        }}
-                        className="absolute inset-0 cursor-pointer opacity-0 z-10"
-                      />
-                      <div className="text-center w-full">
-                        {formData.previewUrl ? (
-                          <div className="relative mx-auto aspect-video w-full max-w-sm overflow-hidden rounded-lg shadow-sm">
+                    {/* Image Preview */}
+                    {formData.imageUrl && (formData.imageUrl.startsWith("http://") || formData.imageUrl.startsWith("https://")) && (
+                      <div className="mt-3">
+                        {!imagePreviewError ? (
+                          <div className="relative mx-auto aspect-video w-full max-w-sm overflow-hidden rounded-lg border border-gray-200 shadow-sm">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img 
-                              src={formData.previewUrl} 
+                              src={formData.imageUrl} 
                               alt="Preview" 
                               className="h-full w-full object-cover"
+                              onError={() => setImagePreviewError(true)}
                             />
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity hover:opacity-100">
-                              <p className="text-sm font-bold text-white">Click to Change</p>
-                            </div>
                           </div>
                         ) : (
-                          <>
-                            <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100">
-                              <BookOpen className="h-5 w-5 text-gray-400" />
-                            </div>
-                            <p className="text-sm font-medium text-gray-600">
-                              <span className="text-brand-primary">Click to upload</span>{" "}
-                              or drag and drop
-                            </p>
-                            <p className="mt-1 text-xs text-gray-400">
-                              SVG, PNG, JPG or GIF (max. 800x400px)
-                            </p>
-                          </>
+                          <p className="text-sm text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                            ⚠️ Could not load image preview. The URL may be invalid or blocked.
+                          </p>
                         )}
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   <div>

@@ -19,8 +19,8 @@ const comfortaa = Comfortaa({
 });
 
 export const metadata: Metadata = {
-  title: "High Ticket English Admin",
-  description: "Admin panel for High Ticket English platform",
+  title: "High Ticket USA Admin",
+  description: "Admin panel for High Ticket USA platform",
 };
 
 export default function RootLayout({
