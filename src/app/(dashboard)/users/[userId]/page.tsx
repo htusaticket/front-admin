@@ -289,8 +289,8 @@ export default function UserDetailPage() {
           
           {/* Action Buttons for PENDING users */}
           <div className="flex items-center gap-3">
-            {/* Approve/Reject buttons for PENDING users - visible to ADMIN and SUPERADMIN */}
-            {user.status === "PENDING" && (
+            {/* Approve/Reject buttons for PENDING users - visible only to SUPERADMIN */}
+            {user.status === "PENDING" && isSuperAdmin && (
               <button
                 onClick={() => setIsApproveRejectModalOpen(true)}
                 className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white hover:bg-amber-600 transition-colors"

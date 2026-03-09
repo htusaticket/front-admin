@@ -45,7 +45,7 @@ interface AdminDashboardState {
 }
 
 interface AdminDashboardActions {
-  fetchDashboard: () => Promise<void>;
+  fetchDashboard: (period?: 'today' | 'week') => Promise<void>;
   fetchNotifications: () => Promise<void>;
   markNotificationAsRead: (id: string) => Promise<void>;
   markAllNotificationsAsRead: () => Promise<void>;
@@ -67,12 +67,13 @@ const initialState: AdminDashboardState = {
 export const useAdminDashboardStore = create<AdminDashboardStore>((set) => ({
   ...initialState,
 
-  fetchDashboard: async () => {
+  fetchDashboard: async (period?: 'today' | 'week') => {
     set({ isLoading: true, error: null });
     
     try {
+      const params = period ? `?period=${period}` : '';
       const response = await api.get<ApiResponse<{ stats: DashboardStats; recentActivity: RecentActivity[] }>>(
-        "/api/admin/dashboard",
+        `/api/admin/dashboard${params}`,
       );
       
       const { stats, recentActivity } = response.data.data;

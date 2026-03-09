@@ -179,10 +179,16 @@ export interface UpdateStatusPayload {
   reason?: string;
 }
 
+// Approve registration payload (PENDING -> ACTIVE with plan)
+export interface ApproveRegistrationPayload {
+  plan: UserPlan;
+  startDate: string;
+  endDate: string;
+}
+
 // Approve registration response (PENDING -> ACTIVE)
 export interface ApproveRegistrationResponse {
-  id: string;
-  status: UserStatus;
+  success: boolean;
   message: string;
 }
 

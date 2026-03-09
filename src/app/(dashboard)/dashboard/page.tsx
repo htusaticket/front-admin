@@ -44,10 +44,13 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { stats, recentActivity, isLoading, error, fetchDashboard } = useAdminDashboardStore();
+  
+  const isSuperAdmin = user?.role === "SUPERADMIN";
 
   useEffect(() => {
-    fetchDashboard();
-  }, [fetchDashboard]);
+    // SUPERADMIN sees weekly stats, others see daily
+    fetchDashboard(isSuperAdmin ? 'week' : 'today');
+  }, [fetchDashboard, isSuperAdmin]);
 
   // Get user display name
   const getUserGreeting = () => {
@@ -68,7 +71,7 @@ export default function DashboardPage() {
           Admin Dashboard
         </h1>
         <p className="mt-2 text-base text-gray-700 sm:text-lg">
-          Welcome, {getUserGreeting()}. Here&apos;s today&apos;s summary.
+          Welcome, {getUserGreeting()}. Here&apos;s {isSuperAdmin ? "this week's" : "today's"} summary.
         </p>
       </div>
 
@@ -146,7 +149,7 @@ export default function DashboardPage() {
               </p>
             </motion.div>
 
-            {/* Classes Today */}
+            {/* Classes Today/Week */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -157,7 +160,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-500">
-                    Classes Today
+                    {isSuperAdmin ? "Classes This Week" : "Classes Today"}
                   </p>
                   <p className="mt-1 font-display text-3xl font-bold text-brand-primary">
                     {stats.classesToday}

@@ -15,6 +15,7 @@ import type {
   ApiResponse,
   RejectRegistrationPayload,
   ActivateUserPayload,
+  ApproveRegistrationPayload,
   ApproveRegistrationResponse,
   RejectRegistrationResponse,
   ActivateUserResponse,
@@ -39,7 +40,7 @@ interface UsersActions {
   updateUserStatus: (userId: string, data: UpdateStatusPayload) => Promise<{ success: boolean; message?: string }>;
   updateUserNotes: (userId: string, data: UpdateNotesPayload) => Promise<{ success: boolean; message?: string }>;
   issueStrike: (userId: string, data: IssueStrikePayload) => Promise<{ success: boolean; message?: string }>;
-  approveRegistration: (userId: string) => Promise<{ success: boolean; message?: string }>;
+  approveRegistration: (userId: string, data: ApproveRegistrationPayload) => Promise<{ success: boolean; message?: string }>;
   rejectRegistration: (
     userId: string,
     data: RejectRegistrationPayload,
@@ -276,12 +277,13 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
     }
   },
 
-  approveRegistration: async (userId: string) => {
+  approveRegistration: async (userId: string, data: ApproveRegistrationPayload) => {
     set({ isLoading: true, error: null });
     
     try {
       const response = await api.post<ApiResponse<ApproveRegistrationResponse>>(
         `/api/admin/users/${userId}/approve`,
+        data,
       );
       
       // Actualizar usuario en la lista local (PENDING -> ACTIVE)
