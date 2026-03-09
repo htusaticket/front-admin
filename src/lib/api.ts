@@ -35,6 +35,16 @@ api.interceptors.response.use(
         status: error.response.status,
         data: error.response.data,
       });
+      
+      // Limpiar cookies de autenticación
+      Cookies.remove("accessToken");
+      Cookies.remove("userStatus");
+      Cookies.remove("userRole");
+      
+      // Redirigir al login solo si estamos en el cliente y no estamos ya en login
+      if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
+        window.location.href = "/login";
+      }
     }
     
     return Promise.reject(error);
