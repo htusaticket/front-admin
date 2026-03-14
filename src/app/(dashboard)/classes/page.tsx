@@ -5,15 +5,21 @@ import {
   Calendar,
   Clock,
   Users,
-  MoreHorizontal,
   Loader2,
   Video,
+  Pencil,
+  Trash2,
+  Link as LinkIcon,
+  X,
+  Check,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 import { AddClassModal } from "@/components/classes/AddClassModal";
 import { AttendanceModal } from "@/components/classes/AttendanceModal";
 import { useClassesStore } from "@/store/classes";
+import type { AdminClass } from "@/types/admin";
 
 const formatDateTime = (dateStr: string): { date: string; time: string; day: string } => {
   const date = new Date(dateStr);
@@ -31,16 +37,22 @@ const formatDateTime = (dateStr: string): { date: string; time: string; day: str
   }
   
   return {
-    date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-    time: date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }),
+    date: date.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" }),
+    time: `${date.getUTCHours().toString().padStart(2, "0")}:${date.getUTCMinutes().toString().padStart(2, "0")}`,
     day,
   };
 };
 
 const formatTimeRange = (start: string, end: string): string => {
-  const startTime = new Date(start).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
-  const endTime = new Date(end).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const startTime = `${startDate.getUTCHours().toString().padStart(2, "0")}:${startDate.getUTCMinutes().toString().padStart(2, "0")}`;
+  const endTime = `${endDate.getUTCHours().toString().padStart(2, "0")}:${endDate.getUTCMinutes().toString().padStart(2, "0")}`;
   return `${startTime} - ${endTime}`;
+};
+
+const hasClassStarted = (startTimeStr: string): boolean => {
+  return new Date(startTimeStr) <= new Date();
 };
 
 export default function ClassesPage() {
@@ -48,11 +60,18 @@ export default function ClassesPage() {
     classes, 
     isLoading, 
     error,
-    fetchClasses, 
+    fetchClasses,
+    updateClass,
+    deleteClass,
   } = useClassesStore();
 
   const [isAddClassOpen, setIsAddClassOpen] = useState(false);
   const [attendanceClass, setAttendanceClass] = useState<{ id: number; title: string; date: string } | null>(null);
+  const [editingClass, setEditingClass] = useState<AdminClass | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", meetLink: "", startTime: "", endTime: "", date: "" });
+  const [recordingLinkClass, setRecordingLinkClass] = useState<number | null>(null);
+  const [recordingLink, setRecordingLink] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     fetchClasses({ limit: 50 });
@@ -65,6 +84,60 @@ export default function ClassesPage() {
       title: classItem.title, 
       date, 
     });
+  };
+
+  const handleEditClick = (session: AdminClass) => {
+    const startDate = new Date(session.startTime);
+    const endDate = new Date(session.endTime);
+    setEditingClass(session);
+    setEditForm({
+      title: session.title,
+      meetLink: session.meetLink || "",
+      date: `${startDate.getUTCFullYear()}-${(startDate.getUTCMonth()+1).toString().padStart(2, "0")}-${startDate.getUTCDate().toString().padStart(2, "0")}`,
+      startTime: `${startDate.getUTCHours().toString().padStart(2, "0")}:${startDate.getUTCMinutes().toString().padStart(2, "0")}`,
+      endTime: `${endDate.getUTCHours().toString().padStart(2, "0")}:${endDate.getUTCMinutes().toString().padStart(2, "0")}`,
+    });
+  };
+
+  const handleEditSave = async () => {
+    if (!editingClass) return;
+    setIsSaving(true);
+    const result = await updateClass(editingClass.id, {
+      title: editForm.title,
+      meetLink: editForm.meetLink || undefined,
+      startTime: `${editForm.date}T${editForm.startTime}:00.000Z`,
+      endTime: `${editForm.date}T${editForm.endTime}:00.000Z`,
+    });
+    setIsSaving(false);
+    if (result.success) {
+      toast.success("Class updated successfully");
+      setEditingClass(null);
+    } else {
+      toast.error(result.message || "Error updating class");
+    }
+  };
+
+  const handleCancelClass = async (session: AdminClass) => {
+    if (!confirm(`Are you sure you want to delete "${session.title}"?`)) return;
+    const result = await deleteClass(session.id);
+    if (result.success) {
+      toast.success("Class cancelled successfully");
+    } else {
+      toast.error(result.message || "Error cancelling class");
+    }
+  };
+
+  const handleSaveRecordingLink = async (classId: number) => {
+    setIsSaving(true);
+    const result = await updateClass(classId, { description: `[RECORDING]${recordingLink}` } as never);
+    setIsSaving(false);
+    if (result.success) {
+      toast.success("Recording link saved");
+      setRecordingLinkClass(null);
+      setRecordingLink("");
+    } else {
+      toast.error(result.message || "Error saving recording link");
+    }
   };
 
   if (isLoading && classes.length === 0) {
@@ -120,7 +193,8 @@ export default function ClassesPage() {
           {classes.map((session, index) => {
             const { date, day } = formatDateTime(session.startTime);
             const timeRange = formatTimeRange(session.startTime, session.endTime);
-            const isPast = new Date(session.startTime) < new Date();
+            const isPast = new Date(session.endTime) < new Date();
+            const classStarted = hasClassStarted(session.startTime);
             
             return (
               <motion.div
@@ -135,18 +209,12 @@ export default function ClassesPage() {
                 {/* Card Content */}
                 <div className="bg-brand-primary/5 p-5 pb-8">
                   <div className="flex items-start justify-between mb-4">
-                    <div className={`rounded-lg px-3 py-1 text-xs font-bold ${
-                      session.type === "WORKSHOP"
-                        ? "bg-purple-100 text-purple-700"
-                        : "bg-brand-primary/10 text-brand-primary"
-                    }`}>
-                      {session.type === "WORKSHOP" ? "Workshop" : "Regular Class"}
+                    <div className={`rounded-lg px-3 py-1 text-xs font-bold ${session.type === "WORKSHOP" ? "bg-purple-100 text-purple-700" : session.type === "WEBINAR" ? "bg-blue-100 text-blue-700" : session.type === "QA" ? "bg-amber-100 text-amber-700" : session.type === "MASTERCLASS" ? "bg-emerald-100 text-emerald-700" : "bg-brand-primary/10 text-brand-primary"}`}>
+                      {session.type === "WORKSHOP" ? "Workshop" : session.type === "WEBINAR" ? "Webinar" : session.type === "QA" ? "Q&A" : session.type === "MASTERCLASS" ? "Masterclass" : "Class"}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button className="rounded-lg bg-white p-2 text-gray-500 hover:text-brand-primary shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
-                    </div>
+                    {isPast && (
+                      <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-lg">Finished</span>
+                    )}
                   </div>
                   <h3 className="font-display text-lg font-bold text-gray-900 mb-1">
                     {session.title}
@@ -190,23 +258,63 @@ export default function ClassesPage() {
                     </a>
                   )}
 
-                  {/* Card Action */}
+                  {/* Card Actions */}
                   <div className="space-y-2">
-                    <button
-                      onClick={() => handleAttendanceClick(session)}
-                      className="w-full rounded-xl bg-gray-900 py-2.5 text-sm font-bold text-white transition-all hover:bg-gray-800"
-                    >
-                      Take Attendance
-                    </button>
+                    {classStarted ? (
+                      <button
+                        onClick={() => handleAttendanceClick(session)}
+                        className="w-full rounded-xl bg-gray-900 py-2.5 text-sm font-bold text-white transition-all hover:bg-gray-800"
+                      >
+                        Take Attendance
+                      </button>
+                    ) : (
+                      <div className="w-full rounded-xl bg-gray-100 py-2.5 text-sm font-bold text-gray-400 text-center cursor-not-allowed">
+                        Attendance available when class starts
+                      </div>
+                    )}
+
+                    {/* Recording Link */}
+                    {isPast && (
+                      recordingLinkClass === session.id ? (
+                        <div className="flex gap-2">
+                          <input
+                            type="url"
+                            placeholder="Paste recording URL..."
+                            value={recordingLink}
+                            onChange={(e) => setRecordingLink(e.target.value)}
+                            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-primary"
+                          />
+                          <button onClick={() => handleSaveRecordingLink(session.id)} disabled={isSaving || !recordingLink} className="rounded-lg bg-green-600 p-2 text-white hover:bg-green-700 disabled:opacity-50">
+                            <Check className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => { setRecordingLinkClass(null); setRecordingLink(""); }} className="rounded-lg bg-gray-100 p-2 text-gray-500 hover:bg-gray-200">
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setRecordingLinkClass(session.id)}
+                          className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 py-2.5 text-sm font-bold text-gray-500 transition-all hover:border-brand-primary hover:text-brand-primary"
+                        >
+                          <LinkIcon className="h-4 w-4" />
+                          Add Recording Link
+                        </button>
+                      )
+                    )}
+
                     <div className="flex gap-3">
                       <button
-                        className="flex-1 rounded-xl border border-gray-200 bg-white py-2.5 text-sm font-bold text-gray-700 transition-all hover:border-brand-primary hover:text-brand-primary"
+                        onClick={() => handleEditClick(session)}
+                        className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white py-2.5 text-sm font-bold text-gray-700 transition-all hover:border-brand-primary hover:text-brand-primary"
                       >
+                        <Pencil className="h-3.5 w-3.5" />
                         Edit
                       </button>
                       <button
-                        className="flex-1 rounded-xl border border-red-100 bg-red-50 py-2.5 text-sm font-bold text-red-600 transition-all hover:bg-red-100"
+                        onClick={() => handleCancelClass(session)}
+                        className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-red-100 bg-red-50 py-2.5 text-sm font-bold text-red-600 transition-all hover:bg-red-100"
                       >
+                        <Trash2 className="h-3.5 w-3.5" />
                         Cancel
                       </button>
                     </div>
@@ -230,6 +338,64 @@ export default function ClassesPage() {
         classTopic={attendanceClass?.title || ""}
         classDate={attendanceClass?.date || ""}
       />
+
+      {/* Edit Class Modal */}
+      {editingClass && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setEditingClass(null)}
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl"
+            >
+              <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+                <h2 className="font-display text-lg font-bold text-gray-900">Edit Class</h2>
+                <button onClick={() => setEditingClass(null)} className="rounded-full p-2 text-gray-500 hover:bg-gray-100">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">Title</label>
+                  <input type="text" value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">Date</label>
+                  <input type="date" value={editForm.date} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-gray-700">Start Time</label>
+                    <input type="time" value={editForm.startTime} onChange={(e) => setEditForm({ ...editForm, startTime: e.target.value })} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-gray-700">End Time</label>
+                    <input type="time" value={editForm.endTime} onChange={(e) => setEditForm({ ...editForm, endTime: e.target.value })} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">Meet Link</label>
+                  <input type="url" value={editForm.meetLink} onChange={(e) => setEditForm({ ...editForm, meetLink: e.target.value })} placeholder="https://meet.google.com/..." className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
+                <button onClick={() => setEditingClass(null)} className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button onClick={handleEditSave} disabled={isSaving} className="flex items-center gap-2 rounded-xl bg-brand-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-brand-primary/90 disabled:opacity-50">
+                  {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Save Changes
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

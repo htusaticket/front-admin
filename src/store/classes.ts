@@ -25,6 +25,8 @@ interface ClassesState {
 interface ClassesActions {
   fetchClasses: (query?: GetClassesQuery) => Promise<void>;
   createClass: (data: CreateClassPayload) => Promise<{ success: boolean; message?: string }>;
+  updateClass: (classId: number, data: Partial<CreateClassPayload>) => Promise<{ success: boolean; message?: string }>;
+  deleteClass: (classId: number) => Promise<{ success: boolean; message?: string }>;
   fetchClassAttendees: (classId: number) => Promise<{ success: boolean; message?: string }>;
   saveAttendance: (
     classId: number,
@@ -109,15 +111,71 @@ export const useClassesStore = create<ClassesStore>((set, get) => ({
     }
   },
 
+  updateClass: async (classId: number, data: Partial<CreateClassPayload>) => {
+    set({ isLoading: true, error: null });
+    
+    try {
+      const response = await api.patch<ApiResponse<AdminClass>>(`/api/admin/classes/${classId}`, data);
+      
+      await get().fetchClasses({ page: 1, limit: get().limit });
+      
+      set({ isLoading: false });
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      set({ error: errorMessage, isLoading: false });
+      return { success: false, message: errorMessage };
+    }
+  },
+
+  deleteClass: async (classId: number) => {
+    set({ isLoading: true, error: null });
+    
+    try {
+      const response = await api.delete<ApiResponse<void>>(`/api/admin/classes/${classId}`);
+      
+      await get().fetchClasses({ page: 1, limit: get().limit });
+      
+      set({ isLoading: false });
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      set({ error: errorMessage, isLoading: false });
+      return { success: false, message: errorMessage };
+    }
+  },
+
   fetchClassAttendees: async (classId: number) => {
     set({ isLoading: true, error: null });
     
     try {
-      const response = await api.get<ApiResponse<ClassAttendee[]>>(
+      const response = await api.get<ApiResponse<{ classId: number; classTitle: string; attendees: ClassAttendee[] }>>(
         `/api/admin/classes/${classId}/attendees`,
       );
       
-      set({ selectedClassAttendees: response.data.data, isLoading: false });
+      // Backend returns { classId, classTitle, startTime, attendees }
+      const data = response.data.data;
+      const attendees = Array.isArray(data) ? data : (data?.attendees || []);
+      
+      // Map backend fields to frontend ClassAttendee type
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mapped: ClassAttendee[] = attendees.map((a: any) => {
+        // Backend returns 'name' as combined string, and 'id' as enrollment id
+        const name = (a.name as string) || "";
+        const nameParts = name.split(" ");
+        return {
+          enrollmentId: a.id || a.enrollmentId || 0,
+          userId: a.userId || "",
+          firstName: a.firstName || nameParts[0] || "",
+          lastName: a.lastName || nameParts.slice(1).join(" ") || "",
+          email: a.email || "",
+          avatar: a.avatar || null,
+          attendanceStatus: a.attendanceStatus || null,
+          attendanceMarkedAt: a.attendanceMarkedAt || a.enrolledAt || null,
+        };
+      });
+      
+      set({ selectedClassAttendees: mapped, isLoading: false });
       return { success: true };
     } catch (error) {
       const errorMessage = getErrorMessage(error);

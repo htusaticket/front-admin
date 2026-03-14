@@ -580,6 +580,15 @@ export default function SubscriptionsPage() {
                   </div>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Quick Duration</label>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => { const s = new Date(formData.startDate || new Date()); s.setMonth(s.getMonth() + 3); setFormData({ ...formData, endDate: s.toISOString().split("T")[0] }); }} className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold text-gray-700 hover:border-brand-primary hover:bg-brand-primary/5 hover:text-brand-primary transition-all">3 Months</button>
+                    <button type="button" onClick={() => { const s = new Date(formData.startDate || new Date()); s.setMonth(s.getMonth() + 4); setFormData({ ...formData, endDate: s.toISOString().split("T")[0] }); }} className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold text-gray-700 hover:border-brand-primary hover:bg-brand-primary/5 hover:text-brand-primary transition-all">4 Months</button>
+                    <button type="button" onClick={() => setFormData({ ...formData, endDate: "" })} className={`flex-1 rounded-xl border px-3 py-2 text-sm font-bold transition-all ${!formData.endDate ? "border-brand-primary bg-brand-primary/10 text-brand-primary" : "border-gray-200 text-gray-700 hover:border-brand-primary hover:bg-brand-primary/5 hover:text-brand-primary"}`}>∞ Infinite</button>
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-3">
                   <input
                     type="checkbox"
@@ -701,6 +710,15 @@ export default function SubscriptionsPage() {
                       onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                       className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary"
                     />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Quick Duration</label>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => { const s = new Date(formData.startDate || new Date()); s.setMonth(s.getMonth() + 3); setFormData({ ...formData, endDate: s.toISOString().split("T")[0] }); }} className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold text-gray-700 hover:border-brand-primary hover:bg-brand-primary/5 hover:text-brand-primary transition-all">3 Months</button>
+                    <button type="button" onClick={() => { const s = new Date(formData.startDate || new Date()); s.setMonth(s.getMonth() + 4); setFormData({ ...formData, endDate: s.toISOString().split("T")[0] }); }} className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold text-gray-700 hover:border-brand-primary hover:bg-brand-primary/5 hover:text-brand-primary transition-all">4 Months</button>
+                    <button type="button" onClick={() => setFormData({ ...formData, endDate: "" })} className={`flex-1 rounded-xl border px-3 py-2 text-sm font-bold transition-all ${!formData.endDate ? "border-brand-primary bg-brand-primary/10 text-brand-primary" : "border-gray-200 text-gray-700 hover:border-brand-primary hover:bg-brand-primary/5 hover:text-brand-primary"}`}>∞ Infinite</button>
                   </div>
                 </div>
 

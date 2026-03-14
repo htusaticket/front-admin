@@ -2,12 +2,12 @@ export const cn = (...classes: (string | undefined | null | false)[]): string =>
   return classes.filter(Boolean).join(" ");
 };
 
-export const formatDate = (date: Date | string, locale: string = "en-US"): string => {
+export const formatDate = (date: Date | string, locale: string = "es-AR"): string => {
   const dateObj = typeof date === "string" ? new Date(date) : date;
   return new Intl.DateTimeFormat(locale, {
     year: "numeric",
-    month: "long",
-    day: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   }).format(dateObj);
 };
 

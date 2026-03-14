@@ -6,22 +6,36 @@ import {
   DollarSign,
   MapPin,
   Building,
-  Filter,
   Search,
-  ExternalLink,
   CheckCircle,
   Upload,
   Loader2,
   AlertCircle,
   Trash2,
   Plus,
+  Pencil,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 import { CreateJobModal } from "@/components/jobs/CreateJobModal";
+import { EditJobModal } from "@/components/jobs/EditJobModal";
 import { UploadJobsModal } from "@/components/jobs/UploadJobsModal";
 import { useAuthStore } from "@/store/auth";
 import { useJobsStore, type JobOffer } from "@/store/jobs";
+
+const JOB_TYPES = [
+  { value: "", label: "All Types" },
+  { value: "Full-time", label: "Full-time" },
+  { value: "Part-time", label: "Part-time" },
+  { value: "Contract", label: "Contract" },
+  { value: "Freelance", label: "Freelance" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "", label: "All Status" },
+  { value: "true", label: "Active" },
+  { value: "false", label: "Inactive" },
+];
 
 export default function JobsPage() {
   const { user } = useAuthStore();
@@ -37,18 +51,40 @@ export default function JobsPage() {
   const [selectedJob, setSelectedJob] = useState<JobOffer | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
   
   const isSuperAdmin = user?.role === "SUPERADMIN";
+
+  const loadJobs = useCallback(() => {
+    const params: Record<string, string | boolean | number> = {};
+    if (searchTerm) params.search = searchTerm;
+    if (filterType) params.type = filterType;
+    if (filterStatus !== "") params.isActive = filterStatus === "true";
+    fetchJobs(params);
+  }, [fetchJobs, searchTerm, filterType, filterStatus]);
   
   useEffect(() => {
-    fetchJobs();
-  }, [fetchJobs]);
+    loadJobs();
+  }, [loadJobs]);
   
   useEffect(() => {
     if (jobs.length > 0 && !selectedJob) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedJob(jobs[0]);
+    }
+  }, [jobs, selectedJob]);
+
+  // Keep selectedJob in sync with store data after edits
+  useEffect(() => {
+    if (selectedJob) {
+      const updated = jobs.find(j => j.id === selectedJob.id);
+      if (updated && updated !== selectedJob) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSelectedJob(updated);
+      }
     }
   }, [jobs, selectedJob]);
   
@@ -66,6 +102,11 @@ export default function JobsPage() {
         setSelectedJob(jobs[0] || null);
       }
     }
+  };
+
+  const handleEditJob = (job: JobOffer) => {
+    setSelectedJob(job);
+    setIsEditModalOpen(true);
   };
   
   if (isLoading && jobs.length === 0) {
@@ -180,14 +221,24 @@ export default function JobsPage() {
             className="h-12 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-4 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
           />
         </div>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="flex h-12 items-center gap-2 rounded-xl border border-gray-200 bg-white px-6 text-sm font-semibold text-gray-700 transition-all hover:border-brand-cyan-dark hover:bg-gray-50"
+        <select
+          value={filterType}
+          onChange={(e) => setFilterType(e.target.value)}
+          className="h-12 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
         >
-          <Filter className="h-4 w-4" />
-          Filters
-        </motion.button>
+          {JOB_TYPES.map((t) => (
+            <option key={t.value} value={t.value}>{t.label}</option>
+          ))}
+        </select>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className="h-12 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
+        >
+          {STATUS_OPTIONS.map((s) => (
+            <option key={s.value} value={s.value}>{s.label}</option>
+          ))}
+        </select>
       </div>
 
       {filteredJobs.length === 0 ? (
@@ -236,8 +287,8 @@ export default function JobsPage() {
                     <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
                       {job.type}
                     </span>
-                    <span className="text-xs font-medium text-gray-500">
-                  Active
+                    <span className={`text-xs font-medium ${job.isActive ? "text-green-600" : "text-gray-400"}`}>
+                      {job.isActive ? "Active" : "Inactive"}
                     </span>
                   </div>
                 </motion.div>
@@ -263,10 +314,13 @@ export default function JobsPage() {
                           {selectedJob.company}
                         </p>
                       </div>
-                      <button className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-200 transition-colors">
-                        <ExternalLink className="h-4 w-4" />
-                    View Public Page
-                      </button>
+                      <span className={`rounded-full px-3 py-1 text-xs font-bold ${
+                        selectedJob.isActive 
+                          ? "bg-green-100 text-green-700" 
+                          : "bg-gray-100 text-gray-500"
+                      }`}>
+                        {selectedJob.isActive ? "Active" : "Inactive"}
+                      </span>
                     </div>
 
                     <div className="flex flex-wrap gap-4 text-sm text-gray-600">
@@ -312,14 +366,11 @@ export default function JobsPage() {
 
                   <div className="flex gap-3 pt-4 border-t border-gray-100">
                     <button
-                      className="flex-1 rounded-xl bg-brand-primary px-6 py-3 text-sm font-bold text-white shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary/90"
+                      onClick={() => handleEditJob(selectedJob)}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-primary px-6 py-3 text-sm font-bold text-white shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary/90"
                     >
-                Edit Listing
-                    </button>
-                    <button
-                      className="flex-1 rounded-xl border border-gray-200 bg-white px-6 py-3 text-sm font-bold text-gray-700 transition-all hover:border-gray-300 hover:bg-gray-50"
-                    >
-                Manage Applications ({selectedJob.applicationsCount || 0})
+                      <Pencil className="h-4 w-4" />
+                      Edit Listing
                     </button>
                     {isSuperAdmin && (
                       <button
@@ -332,7 +383,7 @@ export default function JobsPage() {
                         ) : (
                           <Trash2 className="h-4 w-4" />
                         )}
-                Delete
+                        Delete
                       </button>
                     )}
                   </div>
@@ -349,6 +400,11 @@ export default function JobsPage() {
       <CreateJobModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+      />
+      <EditJobModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        job={selectedJob}
       />
     </div>
   );

@@ -183,7 +183,7 @@ export interface UpdateStatusPayload {
 export interface ApproveRegistrationPayload {
   plan: UserPlan;
   startDate: string;
-  endDate: string;
+  endDate?: string;
 }
 
 // Approve registration response (PENDING -> ACTIVE)
@@ -230,7 +230,7 @@ export interface UpdateNotesPayload {
 export interface AdminClass {
   id: number;
   title: string;
-  type: "REGULAR" | "WORKSHOP";
+  type: "REGULAR" | "WORKSHOP" | "WEBINAR" | "QA" | "MASTERCLASS";
   startTime: string;
   endTime: string;
   capacityMax: number | null;
@@ -255,7 +255,7 @@ export interface ClassAttendee {
 export interface GetClassesQuery {
   page?: number;
   limit?: number;
-  type?: "REGULAR" | "WORKSHOP";
+  type?: "REGULAR" | "WORKSHOP" | "WEBINAR" | "QA" | "MASTERCLASS";
   from?: string;
   to?: string;
 }
@@ -263,7 +263,7 @@ export interface GetClassesQuery {
 // Create class payload
 export interface CreateClassPayload {
   title: string;
-  type: "REGULAR" | "WORKSHOP";
+  type: "REGULAR" | "WORKSHOP" | "WEBINAR" | "QA" | "MASTERCLASS";
   startTime: string;
   endTime: string;
   meetLink?: string;
@@ -273,7 +273,8 @@ export interface CreateClassPayload {
 
 // Save attendance payload
 export interface AttendanceRecord {
-  enrollmentId: number;
+  userId: string;
+  enrollmentId?: number;
   status: AttendanceStatus;
 }
 
