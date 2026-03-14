@@ -50,13 +50,13 @@ export function ApproveRejectModal({
 
   const handleApprove = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPlan || !startDate || !endDate) return;
+    if (!selectedPlan || !startDate) return;
 
     setIsSubmitting(true);
     const result = await approveRegistration(userId, {
       plan: selectedPlan,
       startDate,
-      endDate,
+      endDate: endDate || undefined,
     });
     setIsSubmitting(false);
 
@@ -244,16 +244,59 @@ export function ApproveRejectModal({
                       </div>
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                          End Date *
+                          End Date
                         </label>
                         <input
                           type="date"
                           value={endDate}
                           onChange={(e) => setEndDate(e.target.value)}
                           min={startDate}
-                          required
                           className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                         />
+                      </div>
+                    </div>
+
+                    {/* Quick Duration Buttons */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Quick Duration
+                      </label>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const start = new Date(startDate);
+                            start.setMonth(start.getMonth() + 3);
+                            setEndDate(start.toISOString().split("T")[0]);
+                          }}
+                          className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold text-gray-700 hover:border-brand-primary hover:bg-brand-primary/5 hover:text-brand-primary transition-all"
+                        >
+                          3 Months
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const start = new Date(startDate);
+                            start.setMonth(start.getMonth() + 4);
+                            setEndDate(start.toISOString().split("T")[0]);
+                          }}
+                          className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold text-gray-700 hover:border-brand-primary hover:bg-brand-primary/5 hover:text-brand-primary transition-all"
+                        >
+                          4 Months
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEndDate("");
+                          }}
+                          className={`flex-1 rounded-xl border px-3 py-2 text-sm font-bold transition-all ${
+                            !endDate
+                              ? "border-brand-primary bg-brand-primary/10 text-brand-primary"
+                              : "border-gray-200 text-gray-700 hover:border-brand-primary hover:bg-brand-primary/5 hover:text-brand-primary"
+                          }`}
+                        >
+                          ∞ Infinite
+                        </button>
                       </div>
                     </div>
 
@@ -268,7 +311,7 @@ export function ApproveRejectModal({
                       </button>
                       <button
                         type="submit"
-                        disabled={isSubmitting || !selectedPlan || !startDate || !endDate}
+                        disabled={isSubmitting || !selectedPlan || !startDate}
                         className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
                       >
                         {isSubmitting ? (

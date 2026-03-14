@@ -55,7 +55,7 @@ const getInitials = (firstName: string, lastName: string): string => {
 const formatDate = (dateStr: string | null): string => {
   if (!dateStr) return "-";
   const date = new Date(dateStr);
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return date.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
 };
 
 const getAttendanceBadge = (status: AttendanceStatus | null) => {

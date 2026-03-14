@@ -94,7 +94,7 @@ export function AttendanceModal({ isOpen, onClose, classId, classTopic, classDat
     const attendance = attendees
       .filter(a => a.attendanceStatus !== null)
       .map(a => ({
-        enrollmentId: a.enrollmentId,
+        userId: a.userId,
         status: a.attendanceStatus as AttendanceStatus,
       }));
 

@@ -303,7 +303,7 @@ export const Header = () => {
             </div>
             <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border-2 border-brand-cyan-dark shadow-sm">
               <Image
-                src="/logo.webp"
+                src="https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png"
                 alt="User"
                 fill
                 className="object-cover"

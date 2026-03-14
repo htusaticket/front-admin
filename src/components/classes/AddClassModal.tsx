@@ -11,7 +11,7 @@ interface AddClassModalProps {
   onClose: () => void;
 }
 
-type ClassType = "REGULAR" | "WORKSHOP";
+type ClassType = "REGULAR" | "WORKSHOP" | "WEBINAR" | "QA" | "MASTERCLASS";
 
 export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
   const { createClass, isLoading } = useClassesStore();
@@ -24,7 +24,7 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
     meetLink: "",
     maxCapacity: 15,
     isUnlimited: false,
-    hasStrike: true,
+    hasStrike: false,
     type: "REGULAR" as ClassType,
   });
   
@@ -46,9 +46,9 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
     e.preventDefault();
     setFormError(null);
 
-    // Combine date and time into ISO datetime
-    const startTime = new Date(`${formData.date}T${formData.startTime}`).toISOString();
-    const endTime = new Date(`${formData.date}T${formData.endTime}`).toISOString();
+    // Combine date and time into ISO datetime - use UTC to preserve intended time
+    const startTime = `${formData.date}T${formData.startTime}:00.000Z`;
+    const endTime = `${formData.date}T${formData.endTime}:00.000Z`;
 
     const result = await createClass({
       title: formData.title,
@@ -70,7 +70,7 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
         meetLink: "",
         maxCapacity: 15,
         isUnlimited: false,
-        hasStrike: true,
+        hasStrike: false,
         type: "REGULAR",
       });
       setAttachedFiles([]);
@@ -175,8 +175,11 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
                         }
                         className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20 bg-white"
                       >
-                        <option value="REGULAR">Regular Class</option>
+                        <option value="REGULAR">Class</option>
                         <option value="WORKSHOP">Workshop</option>
+                        <option value="WEBINAR">Webinar</option>
+                        <option value="QA">Q&A</option>
+                        <option value="MASTERCLASS">Masterclass</option>
                       </select>
                     </div>
                   </div>
@@ -190,9 +193,18 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
                         type="time"
                         required
                         value={formData.startTime}
-                        onChange={(e) =>
-                          setFormData({ ...formData, startTime: e.target.value })
-                        }
+                        onChange={(e) => {
+                          const newStartTime = e.target.value;
+                          const updates: Partial<typeof formData> = { startTime: newStartTime };
+                          // Auto-set endTime to +1 hour if endTime is empty or was auto-set
+                          if (newStartTime) {
+                            const [h, m] = newStartTime.split(":").map(Number);
+                            const endH = ((h + 1) % 24).toString().padStart(2, "0");
+                            const endM = (m || 0).toString().padStart(2, "0");
+                            updates.endTime = `${endH}:${endM}`;
+                          }
+                          setFormData({ ...formData, ...updates });
+                        }}
                         className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
                       />
                     </div>

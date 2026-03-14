@@ -87,7 +87,7 @@ const SidebarContent = ({
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-black">
             <Image
-              src="https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/falcon-logo.png"
+              src="https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png"
               alt="High Ticket USA"
               width={40}
               height={40}
