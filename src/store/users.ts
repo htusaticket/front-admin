@@ -40,6 +40,7 @@ interface UsersActions {
   updateUserStatus: (userId: string, data: UpdateStatusPayload) => Promise<{ success: boolean; message?: string }>;
   updateUserNotes: (userId: string, data: UpdateNotesPayload) => Promise<{ success: boolean; message?: string }>;
   issueStrike: (userId: string, data: IssueStrikePayload) => Promise<{ success: boolean; message?: string }>;
+  removePunishment: (userId: string) => Promise<{ success: boolean; message?: string }>;
   approveRegistration: (
     userId: string,
     data: ApproveRegistrationPayload,
@@ -271,6 +272,39 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
       }
       
       toast.success(response.data.message || "Strike issued successfully");
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      set({ error: errorMessage, isLoading: false });
+      toast.error(errorMessage);
+      return { success: false, message: errorMessage };
+    }
+  },
+
+  removePunishment: async (userId: string) => {
+    set({ isLoading: true, error: null });
+    
+    try {
+      const response = await api.post<ApiResponse<{ message: string }>>(
+        `/api/admin/users/${userId}/remove-punishment`,
+      );
+      
+      // Update user in local list
+      set(state => ({
+        users: state.users.map(u => 
+          u.id === userId 
+            ? { ...u, isPunished: false, punishedUntil: null, strikeCount: 0 } 
+            : u,
+        ),
+        isLoading: false,
+      }));
+      
+      // Reload details if viewing this user
+      if (get().selectedUser?.id === userId) {
+        await get().fetchUserDetails(userId);
+      }
+      
+      toast.success(response.data.message || "Punishment removed successfully");
       return { success: true, message: response.data.message };
     } catch (error) {
       const errorMessage = getErrorMessage(error);
