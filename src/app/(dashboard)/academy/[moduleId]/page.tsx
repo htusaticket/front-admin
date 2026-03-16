@@ -1,5 +1,22 @@
 "use client";
 
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -13,10 +30,12 @@ import {
   Clock,
   ChevronRight,
   ExternalLink,
+  Eye,
+  GripVertical,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 import { AddLessonModal } from "@/components/academy/AddLessonModal";
 import { useAcademyStore, type Lesson } from "@/store/academy";
@@ -34,14 +53,22 @@ export default function ModuleDetailPage() {
     error, 
     fetchModuleById,
     deleteLesson,
+    reorderLessons,
     clearSelectedModule,
   } = useAcademyStore();
   
   const [isAddLessonOpen, setIsAddLessonOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [orderedLessons, setOrderedLessons] = useState<Lesson[]>([]);
 
   const isSuperAdmin = user?.role === "SUPERADMIN";
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   useEffect(() => {
     if (moduleId) {
@@ -52,6 +79,29 @@ export default function ModuleDetailPage() {
       clearSelectedModule();
     };
   }, [moduleId, fetchModuleById, clearSelectedModule]);
+
+  // Keep orderedLessons in sync with selectedModule (DnD requires mutable local state)
+  useEffect(() => {
+    if (selectedModule?.lessons) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOrderedLessons([...selectedModule.lessons].sort((a, b) => a.order - b.order));
+    } else {
+      setOrderedLessons([]);
+    }
+  }, [selectedModule?.lessons]);
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = orderedLessons.findIndex(l => l.id === active.id);
+    const newIndex = orderedLessons.findIndex(l => l.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(orderedLessons, oldIndex, newIndex);
+    setOrderedLessons(reordered);
+    await reorderLessons(moduleId, reordered.map(l => l.id));
+  }, [orderedLessons, reorderLessons, moduleId]);
 
   const handleEditLesson = (lesson: Lesson) => {
     setEditingLesson(lesson);
@@ -129,7 +179,7 @@ export default function ModuleDetailPage() {
     );
   }
 
-  const lessons = selectedModule.lessons || [];
+  const lessons = orderedLessons;
 
   return (
     <div className="space-y-6">
@@ -178,13 +228,22 @@ export default function ModuleDetailPage() {
           </div>
         </div>
         
-        <button
-          onClick={() => setIsAddLessonOpen(true)}
-          className="flex items-center gap-2 rounded-xl bg-brand-cyan-dark px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-cyan-dark/20 transition-all hover:bg-brand-cyan active:scale-95 shrink-0"
-        >
-          <Plus className="h-5 w-5" />
-          Nueva Lección
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            href={`/academy/${moduleId}/preview`}
+            className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <Eye className="h-5 w-5" />
+            Vista Previa
+          </Link>
+          <button
+            onClick={() => setIsAddLessonOpen(true)}
+            className="flex items-center gap-2 rounded-xl bg-brand-cyan-dark px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-cyan-dark/20 transition-all hover:bg-brand-cyan active:scale-95 shrink-0"
+          >
+            <Plus className="h-5 w-5" />
+            Nueva Lección
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -195,7 +254,7 @@ export default function ModuleDetailPage() {
       )}
 
       {/* Lessons List */}
-      {lessons.length === 0 ? (
+      {orderedLessons.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-gray-200">
           <Video className="h-12 w-12 text-gray-300 mb-4" />
           <h3 className="text-lg font-semibold text-gray-900">No hay lecciones</h3>
@@ -209,98 +268,28 @@ export default function ModuleDetailPage() {
           </button>
         </div>
       ) : (
-        <div className="space-y-3">
-          {lessons
-            .sort((a, b) => a.order - b.order)
-            .map((lesson, index) => (
-              <motion.div
-                key={lesson.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:border-brand-cyan-dark/30 hover:shadow-md transition-all"
-              >
-                <div className="flex items-start gap-4">
-                  {/* Order indicator */}
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-600 font-bold shrink-0">
-                    {lesson.order || index + 1}
-                  </div>
-                  
-                  {/* Lesson Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-gray-900 truncate">
-                        {lesson.title}
-                      </h4>
-                      {lesson.contentUrl && (
-                        <span className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
-                          <Video className="h-3 w-3" />
-                          Video
-                        </span>
-                      )}
-                    </div>
-                    
-                    {lesson.description && (
-                      <p className="text-sm text-gray-500 line-clamp-1 mt-0.5">
-                        {lesson.description}
-                      </p>
-                    )}
-                    
-                    <div className="flex items-center gap-4 mt-2">
-                      <span className="flex items-center gap-1 text-xs text-gray-500">
-                        <Clock className="h-3 w-3" />
-                        {lesson.duration}
-                      </span>
-                      
-                      {lesson.resources && lesson.resources.length > 0 && (
-                        <span className="flex items-center gap-1 text-xs text-gray-500">
-                          <FileText className="h-3 w-3" />
-                          {lesson.resources.length} {lesson.resources.length === 1 ? "recurso" : "recursos"}
-                        </span>
-                      )}
-                      
-                      {lesson.contentUrl && (
-                        <a
-                          href={lesson.contentUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-xs text-brand-cyan-dark hover:underline"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          Ver video
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => handleEditLesson(lesson)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-gray-700 border border-gray-200 rounded-lg hover:border-brand-primary hover:text-brand-primary transition-colors"
-                  >
-                    <Edit2 className="h-4 w-4" />
-                    Editar
-                  </button>
-                  {isSuperAdmin && (
-                    <button
-                      onClick={() => handleDeleteLesson(lesson)}
-                      disabled={isSaving && deletingId === lesson.id}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
-                    >
-                      {isSaving && deletingId === lesson.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                      Eliminar
-                    </button>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={orderedLessons.map(l => l.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {orderedLessons.map((lesson, index) => (
+                <SortableLessonRow
+                  key={lesson.id}
+                  lesson={lesson}
+                  index={index}
+                  isSuperAdmin={isSuperAdmin}
+                  isSaving={isSaving}
+                  deletingId={deletingId}
+                  onEdit={handleEditLesson}
+                  onDelete={handleDeleteLesson}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {/* Add Lesson Modal */}
@@ -311,5 +300,142 @@ export default function ModuleDetailPage() {
         initialData={editingLesson}
       />
     </div>
+  );
+}
+
+// Sortable Lesson Row Component
+interface SortableLessonRowProps {
+  lesson: Lesson;
+  index: number;
+  isSuperAdmin: boolean;
+  isSaving: boolean;
+  deletingId: number | null;
+  onEdit: (lesson: Lesson) => void;
+  onDelete: (lesson: Lesson) => void;
+}
+
+function SortableLessonRow({
+  lesson,
+  index,
+  isSuperAdmin,
+  isSaving,
+  deletingId,
+  onEdit,
+  onDelete,
+}: SortableLessonRowProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: lesson.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <motion.div
+      ref={setNodeRef}
+      style={style}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:border-brand-cyan-dark/30 hover:shadow-md transition-all"
+    >
+      <div className="flex items-start gap-4">
+        {/* Drag Handle */}
+        <button
+          {...attributes}
+          {...listeners}
+          className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing shrink-0 transition-colors"
+          title="Arrastrar para reordenar"
+        >
+          <GripVertical className="h-5 w-5" />
+        </button>
+
+        {/* Order indicator */}
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-600 font-bold shrink-0">
+          {lesson.order || index + 1}
+        </div>
+        
+        {/* Lesson Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h4 className="font-semibold text-gray-900 truncate">
+              {lesson.title}
+            </h4>
+            {lesson.contentUrl && (
+              <span className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
+                <Video className="h-3 w-3" />
+                Video
+              </span>
+            )}
+          </div>
+          
+          {lesson.description && (
+            <p className="text-sm text-gray-500 line-clamp-1 mt-0.5">
+              {lesson.description}
+            </p>
+          )}
+          
+          <div className="flex items-center gap-4 mt-2">
+            <span className="flex items-center gap-1 text-xs text-gray-500">
+              <Clock className="h-3 w-3" />
+              {lesson.duration}
+            </span>
+            
+            {lesson.resources && lesson.resources.length > 0 && (
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <FileText className="h-3 w-3" />
+                {lesson.resources.length} {lesson.resources.length === 1 ? "recurso" : "recursos"}
+              </span>
+            )}
+            
+            {lesson.contentUrl && (
+              <a
+                href={lesson.contentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-xs text-brand-cyan-dark hover:underline"
+              >
+                <ExternalLink className="h-3 w-3" />
+                Ver video
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={() => onEdit(lesson)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-gray-700 border border-gray-200 rounded-lg hover:border-brand-primary hover:text-brand-primary transition-colors"
+        >
+          <Edit2 className="h-4 w-4" />
+          Editar
+        </button>
+        {isSuperAdmin && (
+          <button
+            onClick={() => onDelete(lesson)}
+            disabled={isSaving && deletingId === lesson.id}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+          >
+            {isSaving && deletingId === lesson.id ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+            Eliminar
+          </button>
+        )}
+      </div>
+    </motion.div>
   );
 }

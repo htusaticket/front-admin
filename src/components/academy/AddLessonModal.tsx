@@ -6,20 +6,19 @@ import {
   Check, 
   Video, 
   FileText, 
-  Plus, 
   Trash2, 
   Loader2,
-  Link as LinkIcon,
   Clock,
   GripVertical,
+  Upload,
+  AlertTriangle,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import { 
   useAcademyStore, 
   type Lesson, 
   type LessonResource,
-  type CreateResourceData, 
 } from "@/store/academy";
 
 interface AddLessonModalProps {
@@ -30,7 +29,7 @@ interface AddLessonModalProps {
 }
 
 export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLessonModalProps) {
-  const { createLesson, updateLesson, addResource, deleteResource, isSaving } = useAcademyStore();
+  const { createLesson, updateLesson, uploadResource, deleteResource, isSaving, selectedModule } = useAcademyStore();
   
   const [formData, setFormData] = useState({
     title: "",
@@ -40,19 +39,10 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
     order: 0,
   });
 
-  const [resources, setResources] = useState<(LessonResource | CreateResourceData & { isNew?: boolean })[]>([]);
-  const [newResource, setNewResource] = useState<{
-    title: string;
-    fileUrl: string;
-    type: "PDF" | "LINK" | "VIDEO" | "DOCUMENT";
-    size: string;
-  }>({
-    title: "",
-    fileUrl: "",
-    type: "PDF",
-    size: "",
-  });
-  const [showAddResource, setShowAddResource] = useState(false);
+  const [existingResources, setExistingResources] = useState<LessonResource[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync form data with initialData prop
   useEffect(() => {
@@ -65,7 +55,7 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
         contentUrl: initialData.contentUrl || "",
         order: initialData.order || 0,
       });
-      setResources(initialData.resources || []);
+      setExistingResources(initialData.resources || []);
     } else if (isOpen && !initialData) {
       setFormData({
         title: "",
@@ -74,10 +64,9 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
         contentUrl: "",
         order: 0,
       });
-      setResources([]);
+      setExistingResources([]);
     }
-    setShowAddResource(false);
-    setNewResource({ title: "", fileUrl: "", type: "PDF", size: "" });
+    setPendingFiles([]);
   }, [isOpen, initialData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,46 +85,74 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
       const result = await updateLesson(initialData.id, lessonData);
       
       if (result.success) {
-        // Handle new resources
-        const newResources = resources.filter((r): r is CreateResourceData & { isNew: true } => 
-          "isNew" in r && r.isNew === true,
-        );
-        for (const resource of newResources) {
-          await addResource(initialData.id, {
-            title: resource.title,
-            fileUrl: resource.fileUrl,
-            type: resource.type,
-            size: resource.size,
-          });
+        // Upload any pending files
+        for (const file of pendingFiles) {
+          await uploadResource(initialData.id, file);
         }
         onClose();
       }
     } else {
-      // Create new lesson
+      // Create new lesson, then upload pending files
       const result = await createLesson(moduleId, lessonData);
       if (result.success) {
+        // If there are pending files, get the new lesson from the refreshed module
+        if (pendingFiles.length > 0) {
+          const store = useAcademyStore.getState();
+          const mod = store.selectedModule;
+          if (mod?.lessons) {
+            const newLesson = mod.lessons[mod.lessons.length - 1];
+            if (newLesson) {
+              for (const file of pendingFiles) {
+                await uploadResource(newLesson.id, file);
+              }
+            }
+          }
+        }
         onClose();
       }
     }
   };
 
-  const handleAddResource = () => {
-    if (newResource.title && newResource.fileUrl) {
-      setResources([...resources, { ...newResource, isNew: true }]);
-      setNewResource({ title: "", fileUrl: "", type: "PDF", size: "" });
-      setShowAddResource(false);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setPendingFiles(prev => [...prev, ...newFiles]);
+    }
+    // Reset input to allow re-selecting same file
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
-  const handleRemoveResource = async (index: number) => {
-    const resource = resources[index];
-    
-    if ("id" in resource && resource.id && !("isNew" in resource)) {
-      // Delete from server
-      await deleteResource(resource.id);
+  const handleRemovePendingFile = (index: number) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleRemoveExistingResource = async (resource: LessonResource) => {
+    await deleteResource(resource.id);
+    setExistingResources(prev => prev.filter(r => r.id !== resource.id));
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const newFiles = Array.from(e.dataTransfer.files);
+      setPendingFiles(prev => [...prev, ...newFiles]);
     }
-    
-    setResources(resources.filter((_, i) => i !== index));
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
   };
 
   const getResourceTypeIcon = (type: string) => {
@@ -144,11 +161,14 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
       return <FileText className="h-4 w-4 text-red-500" />;
     case "VIDEO":
       return <Video className="h-4 w-4 text-blue-500" />;
-    case "LINK":
-      return <LinkIcon className="h-4 w-4 text-green-500" />;
     default:
       return <FileText className="h-4 w-4 text-gray-500" />;
     }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+    return `${Math.round(bytes / 1024)} KB`;
   };
 
   return (
@@ -259,6 +279,15 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
                           onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
                           className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
                         />
+                        {/* Order conflict warning */}
+                        {selectedModule?.lessons?.some(
+                          l => l.order === formData.order && l.id !== initialData?.id,
+                        ) && (
+                          <p className="mt-1 flex items-center gap-1 text-xs text-amber-600">
+                            <AlertTriangle className="h-3 w-3" />
+                            Ya existe una lección con este orden. Se reordenará automáticamente.
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -299,31 +328,54 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
                     )}
                   </div>
 
-                  {/* Resources Section */}
+                  {/* Resources Section - File Upload */}
                   <div className="space-y-4 pt-4 border-t border-gray-100">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-red-500" />
-                        Recursos Adicionales
-                      </h3>
-                      {initialData && (
-                        <button
-                          type="button"
-                          onClick={() => setShowAddResource(true)}
-                          className="flex items-center gap-1 text-sm font-semibold text-brand-cyan-dark hover:text-brand-cyan"
-                        >
-                          <Plus className="h-4 w-4" />
-                          Agregar Recurso
-                        </button>
-                      )}
+                    <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-red-500" />
+                      Recursos Adicionales
+                    </h3>
+
+                    {/* Upload Area */}
+                    <div 
+                      className={`relative flex items-center justify-center rounded-xl border-dashed border-2 p-6 transition-all cursor-pointer ${
+                        isDragging 
+                          ? "border-brand-primary bg-brand-primary/5" 
+                          : "border-gray-200 hover:border-brand-primary/50 hover:bg-gray-50"
+                      }`}
+                      onClick={() => fileInputRef.current?.click()}
+                      onDrop={handleDrop}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.mp4,.webm,.mp3,.txt"
+                      />
+                      <div className="text-center w-full">
+                        <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100">
+                          <Upload className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-600">
+                          <span className="text-brand-primary">Click para subir archivos</span>{" "}
+                          o arrastra y suelta
+                        </p>
+                        <p className="mt-1 text-xs text-gray-400">
+                          PDF, documentos, imágenes, videos (máx. 20MB)
+                        </p>
+                      </div>
                     </div>
 
-                    {/* Resource List */}
-                    {resources.length > 0 && (
+                    {/* Existing Resources (edit mode) */}
+                    {existingResources.length > 0 && (
                       <div className="space-y-2">
-                        {resources.map((resource, index) => (
+                        <p className="text-xs font-semibold text-gray-500 uppercase">Recursos existentes</p>
+                        {existingResources.map((resource) => (
                           <div
-                            key={"id" in resource ? resource.id : `new-${index}`}
+                            key={resource.id}
                             className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3"
                           >
                             <div className="flex items-center gap-3 overflow-hidden">
@@ -334,15 +386,14 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
                                 <p className="text-sm font-semibold text-gray-900 truncate">
                                   {resource.title}
                                 </p>
-                                <p className="text-xs text-gray-500 truncate">
-                                  {resource.fileUrl}
-                                  {resource.size && ` • ${resource.size}`}
-                                </p>
+                                {resource.size && (
+                                  <p className="text-xs text-gray-500">{resource.size}</p>
+                                )}
                               </div>
                             </div>
                             <button
                               type="button"
-                              onClick={() => handleRemoveResource(index)}
+                              onClick={() => handleRemoveExistingResource(resource)}
                               className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -352,91 +403,38 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
                       </div>
                     )}
 
-                    {/* Add Resource Form */}
-                    {showAddResource && (
-                      <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="mb-1 block text-xs font-semibold text-gray-600">
-                              Título del Recurso
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="Ej: Guía de estudio"
-                              value={newResource.title}
-                              onChange={(e) => setNewResource({ ...newResource, title: e.target.value })}
-                              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-cyan-dark"
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-semibold text-gray-600">
-                              Tipo
-                            </label>
-                            <select
-                              value={newResource.type}
-                              onChange={(e) => setNewResource({ ...newResource, type: e.target.value as "PDF" | "LINK" | "VIDEO" | "DOCUMENT" })}
-                              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-cyan-dark bg-white"
+                    {/* Pending Files (to be uploaded) */}
+                    {pendingFiles.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-gray-500 uppercase">
+                          Archivos pendientes de subir
+                        </p>
+                        {pendingFiles.map((file, index) => (
+                          <div
+                            key={`pending-${file.name}-${file.size}-${file.lastModified}`}
+                            className="flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3"
+                          >
+                            <div className="flex items-center gap-3 overflow-hidden">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white border border-blue-200">
+                                <Upload className="h-4 w-4 text-blue-500" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold text-gray-900 truncate">
+                                  {file.name}
+                                </p>
+                                <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePendingFile(index)}
+                              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                             >
-                              <option value="PDF">PDF</option>
-                              <option value="VIDEO">Video</option>
-                              <option value="LINK">Link</option>
-                              <option value="DOCUMENT">Documento</option>
-                            </select>
+                              <Trash2 className="h-4 w-4" />
+                            </button>
                           </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-3">
-                          <div className="col-span-2">
-                            <label className="mb-1 block text-xs font-semibold text-gray-600">
-                              URL del Archivo
-                            </label>
-                            <input
-                              type="url"
-                              placeholder="https://..."
-                              value={newResource.fileUrl}
-                              onChange={(e) => setNewResource({ ...newResource, fileUrl: e.target.value })}
-                              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-cyan-dark"
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-semibold text-gray-600">
-                              Tamaño (opcional)
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="Ej: 2.5 MB"
-                              value={newResource.size}
-                              onChange={(e) => setNewResource({ ...newResource, size: e.target.value })}
-                              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-cyan-dark"
-                            />
-                          </div>
-                        </div>
-                        <div className="flex justify-end gap-2 pt-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowAddResource(false);
-                              setNewResource({ title: "", fileUrl: "", type: "PDF", size: "" });
-                            }}
-                            className="px-3 py-1.5 text-sm font-semibold text-gray-600 hover:text-gray-800"
-                          >
-                            Cancelar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleAddResource}
-                            disabled={!newResource.title || !newResource.fileUrl}
-                            className="px-3 py-1.5 text-sm font-semibold text-white bg-brand-cyan-dark rounded-lg hover:bg-brand-cyan disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Agregar
-                          </button>
-                        </div>
+                        ))}
                       </div>
-                    )}
-
-                    {!initialData && resources.length === 0 && (
-                      <p className="text-sm text-gray-500 italic">
-                        Los recursos se pueden agregar después de crear la lección.
-                      </p>
                     )}
                   </div>
                 </div>

@@ -31,6 +31,7 @@ export interface Module {
   description: string;
   image: string;
   order: number;
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   visibleForSkillBuilder: boolean;
   lessonsCount: number;
   createdAt: string;
@@ -51,6 +52,7 @@ export interface CreateModuleData {
   description: string;
   image?: string;
   order?: number;
+  status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   visibleForSkillBuilder?: boolean;
 }
 
@@ -90,7 +92,10 @@ interface AcademyActions {
   updateLesson: (lessonId: number, data: Partial<CreateLessonData>) => Promise<{ success: boolean; message: string }>;
   deleteLesson: (lessonId: number) => Promise<{ success: boolean; message: string }>;
   addResource: (lessonId: number, data: CreateResourceData) => Promise<{ success: boolean; message: string }>;
+  uploadResource: (lessonId: number, file: File) => Promise<{ success: boolean; message: string }>;
   deleteResource: (resourceId: number) => Promise<{ success: boolean; message: string }>;
+  reorderModules: (orderedIds: number[]) => Promise<{ success: boolean; message: string }>;
+  reorderLessons: (moduleId: number, orderedIds: number[]) => Promise<{ success: boolean; message: string }>;
   clearError: () => void;
   clearSelectedModule: () => void;
 }
@@ -372,4 +377,71 @@ export const useAcademyStore = create<AcademyStore>((set, get) => ({
 
   clearError: () => set({ error: null }),
   clearSelectedModule: () => set({ selectedModule: null }),
+
+  uploadResource: async (lessonId, file) => {
+    set({ isSaving: true, error: null });
+    
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      await api.post<ApiResponse<LessonResource>>(
+        `/api/admin/academy/lessons/${lessonId}/resources/upload`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      
+      const { selectedModule } = get();
+      if (selectedModule) {
+        await get().fetchModuleById(selectedModule.id);
+      }
+      
+      set({ isSaving: false });
+      toast.success("Archivo subido correctamente");
+      return { success: true, message: "Archivo subido" };
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      set({ error: errorMessage, isSaving: false });
+      toast.error(errorMessage);
+      return { success: false, message: errorMessage };
+    }
+  },
+
+  reorderModules: async (orderedIds) => {
+    set({ isSaving: true, error: null });
+    
+    try {
+      await api.put("/api/admin/academy/modules/reorder", { orderedIds });
+      
+      await get().fetchModules();
+      
+      set({ isSaving: false });
+      toast.success("Orden de módulos actualizado");
+      return { success: true, message: "Orden actualizado" };
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      set({ error: errorMessage, isSaving: false });
+      toast.error(errorMessage);
+      return { success: false, message: errorMessage };
+    }
+  },
+
+  reorderLessons: async (moduleId, orderedIds) => {
+    set({ isSaving: true, error: null });
+    
+    try {
+      await api.put(`/api/admin/academy/modules/${moduleId}/lessons/reorder`, { orderedIds });
+      
+      await get().fetchModuleById(moduleId);
+      
+      set({ isSaving: false });
+      toast.success("Orden de lecciones actualizado");
+      return { success: true, message: "Orden actualizado" };
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      set({ error: errorMessage, isSaving: false });
+      toast.error(errorMessage);
+      return { success: false, message: errorMessage };
+    }
+  },
 }));

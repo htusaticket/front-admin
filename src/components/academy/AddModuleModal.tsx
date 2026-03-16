@@ -6,6 +6,40 @@ import { useState, useEffect } from "react";
 
 import { useAcademyStore, type Module } from "@/store/academy";
 
+/**
+ * Converts Google Drive sharing URLs to direct image URLs.
+ * Supports various Google Drive URL formats.
+ */
+function convertGoogleDriveUrl(url: string): string {
+  const trimmed = url.trim();
+  
+  // Extract file ID from various Google Drive URL formats
+  let fileId: string | null = null;
+
+  // Pattern: https://drive.google.com/file/d/FILE_ID/view...
+  const fileMatch = trimmed.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+  if (fileMatch?.[1]) fileId = fileMatch[1];
+
+  // Pattern: https://drive.google.com/open?id=FILE_ID
+  if (!fileId) {
+    const openMatch = trimmed.match(/drive\.google\.com\/open\?id=([^&]+)/);
+    if (openMatch?.[1]) fileId = openMatch[1];
+  }
+
+  // Pattern: https://drive.google.com/uc?id=FILE_ID or uc?export=view&id=FILE_ID
+  if (!fileId) {
+    const ucMatch = trimmed.match(/drive\.google\.com\/uc\?.*id=([^&]+)/);
+    if (ucMatch?.[1]) fileId = ucMatch[1];
+  }
+
+  if (fileId) {
+    // Use Google Drive thumbnail API which allows direct embedding in <img> tags
+    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+  }
+  
+  return trimmed;
+}
+
 interface AddModuleModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -19,7 +53,7 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
     title: "",
     description: "",
     level: "Beginner",
-    status: "Draft",
+    status: "DRAFT" as "DRAFT" | "PUBLISHED" | "ARCHIVED",
     imageUrl: "",
     pdfFiles: [] as File[],
     visibleForSkillBuilder: false,
@@ -34,7 +68,7 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
         title: initialData.title || "",
         description: initialData.description || "",
         level: "Beginner",
-        status: "Draft",
+        status: initialData.status || "DRAFT",
         imageUrl: initialData.image || "",
         pdfFiles: [],
         visibleForSkillBuilder: initialData.visibleForSkillBuilder || false,
@@ -47,7 +81,7 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
         title: "",
         description: "",
         level: "Beginner",
-        status: "Draft",
+        status: "DRAFT",
         imageUrl: "",
         pdfFiles: [],
         visibleForSkillBuilder: false,
@@ -64,17 +98,19 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
       title: string;
       description: string;
       visibleForSkillBuilder: boolean;
+      status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
       image?: string;
     } = {
       title: formData.title,
       description: formData.description,
       visibleForSkillBuilder: formData.visibleForSkillBuilder,
+      status: formData.status,
     };
     
     // Only add image if URL is provided and looks like a valid URL
     const trimmedUrl = formData.imageUrl.trim();
     if (trimmedUrl && (trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://"))) {
-      moduleData.image = trimmedUrl;
+      moduleData.image = convertGoogleDriveUrl(trimmedUrl);
     }
     
     if (initialData) {
@@ -184,13 +220,13 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
                       <select
                         value={formData.status}
                         onChange={(e) =>
-                          setFormData({ ...formData, status: e.target.value })
+                          setFormData({ ...formData, status: e.target.value as "DRAFT" | "PUBLISHED" | "ARCHIVED" })
                         }
                         className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20 bg-white"
                       >
-                        <option value="Draft">Draft</option>
-                        <option value="Published">Published</option>
-                        <option value="Archived">Archived</option>
+                        <option value="DRAFT">Draft</option>
+                        <option value="PUBLISHED">Published</option>
+                        <option value="ARCHIVED">Archived</option>
                       </select>
                     </div>
                   </div>
@@ -236,9 +272,10 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
                           <div className="relative mx-auto aspect-video w-full max-w-sm overflow-hidden rounded-lg border border-gray-200 shadow-sm">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img 
-                              src={formData.imageUrl} 
+                              src={convertGoogleDriveUrl(formData.imageUrl)} 
                               alt="Preview" 
                               className="h-full w-full object-cover"
+                              referrerPolicy="no-referrer"
                               onError={() => setImagePreviewError(true)}
                             />
                           </div>

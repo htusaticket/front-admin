@@ -11,6 +11,16 @@ const nextConfig: NextConfig = {
         hostname: "pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "drive.google.com",
+        pathname: "/**",
+      },
     ],
   },
 };
