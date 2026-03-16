@@ -20,6 +20,8 @@ export function ReviewSubmissionModal({ isOpen, onClose, submission }: ReviewSub
   const [selectedStatus, setSelectedStatus] = useState<"APPROVED" | "NEEDS_IMPROVEMENT" | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [audioError, setAudioError] = useState<string | null>(null);
+  const [audioLoading, setAudioLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Reset state when submission changes - this is a valid use case for setState in effect
@@ -33,18 +35,38 @@ export function ReviewSubmissionModal({ isOpen, onClose, submission }: ReviewSub
       setIsPlaying(false);
        
       setError(null);
+
+      setAudioError(null);
+
+      setAudioLoading(false);
     }
   }, [submission]);
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
     if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
+        setIsPlaying(false);
       } else {
-        audioRef.current.play();
+        try {
+          setAudioError(null);
+          setAudioLoading(true);
+          await audioRef.current.play();
+          setIsPlaying(true);
+        } catch {
+          setAudioError("Could not play audio. The file may be unavailable or in an unsupported format.");
+          setIsPlaying(false);
+        } finally {
+          setAudioLoading(false);
+        }
       }
-      setIsPlaying(!isPlaying);
     }
+  };
+
+  const handleAudioError = () => {
+    setIsPlaying(false);
+    setAudioLoading(false);
+    setAudioError("Failed to load audio. The file may not exist or the server returned an error.");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -129,6 +151,12 @@ export function ReviewSubmissionModal({ isOpen, onClose, submission }: ReviewSub
                 {/* Audio Player (for audio submissions) */}
                 {submission.challengeType === "AUDIO" && submission.fileUrl && (
                   <div className="flex flex-col items-center justify-center py-4 space-y-3">
+                    {audioError && (
+                      <div className="w-full rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 text-center">
+                        {audioError}
+                      </div>
+                    )}
+
                     <div className="relative">
                       {/* Visualizer Placeholder */}
                       <div className="flex items-center gap-1 h-8">
@@ -143,7 +171,7 @@ export function ReviewSubmissionModal({ isOpen, onClose, submission }: ReviewSub
                               repeatType: "reverse",
                               delay: i * 0.05, 
                             }}
-                            className={`w-1 rounded-full ${isPlaying ? "bg-brand-primary" : "bg-gray-300"}`}
+                            className={`w-1 rounded-full ${isPlaying ? "bg-brand-primary" : audioError ? "bg-red-300" : "bg-gray-300"}`}
                           />
                         ))}
                       </div>
@@ -153,15 +181,24 @@ export function ReviewSubmissionModal({ isOpen, onClose, submission }: ReviewSub
                       ref={audioRef} 
                       src={submission.fileUrl} 
                       onEnded={() => setIsPlaying(false)}
+                      onError={handleAudioError}
+                      preload="metadata"
                       className="hidden"
                     />
                        
                     <button 
                       onClick={togglePlay}
-                      className="flex items-center gap-2 px-6 py-2 bg-brand-primary text-white rounded-full font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20"
+                      disabled={audioLoading}
+                      className="flex items-center gap-2 px-6 py-2 bg-brand-primary text-white rounded-full font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                      {isPlaying ? "Pause Audio" : "Play Submission"}
+                      {audioLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : isPlaying ? (
+                        <Pause className="h-4 w-4" />
+                      ) : (
+                        <Play className="h-4 w-4" />
+                      )}
+                      {audioLoading ? "Loading..." : isPlaying ? "Pause Audio" : "Play Submission"}
                     </button>
                   </div>
                 )}

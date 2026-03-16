@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { DashboardWrapper } from "@/components/layout/DashboardWrapper";
 
 export const metadata: Metadata = {
-  title: "Dashboard - JFalcon",
+  title: "High Ticket USA - Admin Panel",
   description: "High Ticket English Platform",
 };
 
