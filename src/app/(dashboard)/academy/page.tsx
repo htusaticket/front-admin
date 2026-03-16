@@ -1,5 +1,22 @@
 "use client";
 
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { motion } from "framer-motion";
 import {
   BookOpen,
@@ -10,9 +27,10 @@ import {
   Eye,
   Video,
   Settings,
+  GripVertical,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 import { AddModuleModal } from "@/components/academy/AddModuleModal";
 import { SuggestCourseModal } from "@/components/academy/SuggestCourseModal";
@@ -28,12 +46,14 @@ export default function AcademyPage() {
     isSaving, 
     error, 
     fetchModules, 
-    deleteModule, 
+    deleteModule,
+    reorderModules,
   } = useAcademyStore();
   
   const [isAddModuleOpen, setIsAddModuleOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [orderedModules, setOrderedModules] = useState<Module[]>([]);
   
   // Suggestion State
   const [isSuggestOpen, setIsSuggestOpen] = useState(false);
@@ -41,9 +61,34 @@ export default function AcademyPage() {
 
   const isSuperAdmin = user?.role === "SUPERADMIN";
 
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
   useEffect(() => {
     fetchModules();
   }, [fetchModules]);
+
+  // Keep orderedModules in sync with store (DnD requires mutable local state)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOrderedModules([...modules].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+  }, [modules]);
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = orderedModules.findIndex(m => m.id === active.id);
+    const newIndex = orderedModules.findIndex(m => m.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(orderedModules, oldIndex, newIndex);
+    setOrderedModules(reordered);
+    await reorderModules(reordered.map(m => m.id));
+  }, [orderedModules, reorderModules]);
 
   const handleEditModule = (module: Module) => {
     setEditingModule(module);
@@ -114,98 +159,30 @@ export default function AcademyPage() {
           <p className="text-sm text-gray-500 mt-1">Crea el primer módulo para comenzar</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {modules.map((module, index) => (
-            <motion.div
-              key={module.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:shadow-lg"
-            >
-              <div className="relative h-48 w-full overflow-hidden bg-gray-100">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={module.image || "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1000&auto=format&fit=crop"}
-                  alt={module.title}
-                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={orderedModules.map(m => m.id)} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {orderedModules.map((module, index) => (
+                <SortableModuleCard
+                  key={module.id}
+                  module={module}
+                  index={index}
+                  isSuperAdmin={isSuperAdmin}
+                  isSaving={isSaving}
+                  deletingId={deletingId}
+                  onEdit={handleEditModule}
+                  onDelete={handleDeleteModule}
+                  onSuggest={handleSuggest}
+                  onNavigate={(id) => router.push(`/academy/${id}`)}
                 />
-                <div className="absolute inset-0 bg-black/10 transition-colors group-hover:bg-black/0" />
-                
-                {/* Status badges */}
-                <div className="absolute top-4 left-4 flex flex-col gap-2">
-                  {module.visibleForSkillBuilder && (
-                    <span className="flex items-center gap-1 rounded-lg bg-green-500 px-2 py-1 text-xs font-bold text-white">
-                      <Eye className="h-3 w-3" />
-                      Skill Builder
-                    </span>
-                  )}
-                </div>
-                
-                <div className="absolute top-4 right-4 flex gap-2">
-                  <button 
-                    onClick={() => handleSuggest(module)}
-                    className="rounded-lg bg-white/90 p-2 text-gray-700 shadow-sm hover:text-brand-primary"
-                    title="Suggest to Student"
-                  >
-                    <Send className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex flex-1 flex-col p-5">
-                <div className="flex items-start justify-between">
-                  <h4 className="font-display text-lg font-bold text-brand-primary">
-                    {module.title}
-                  </h4>
-                  <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-bold text-gray-600">
-                    {module.lessonsCount || 0} Lessons
-                  </span>
-                </div>
-                
-                <p className="mt-2 line-clamp-2 text-sm text-gray-600">
-                  {module.description}
-                </p>
-
-                <div className="mt-6 flex items-center gap-2 pt-4 border-t border-gray-100">
-                  {/* Manage Lessons - Primary action */}
-                  <button
-                    onClick={() => router.push(`/academy/${module.id}`)}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-brand-cyan-dark px-3 py-2 text-sm font-semibold text-white hover:bg-brand-cyan transition-colors"
-                  >
-                    <Video className="h-4 w-4" />
-                    Lecciones
-                  </button>
-                  
-                  {/* Edit Module */}
-                  <button
-                    onClick={() => handleEditModule(module)}
-                    className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:border-brand-primary hover:text-brand-primary transition-colors"
-                    title="Editar módulo"
-                  >
-                    <Settings className="h-4 w-4" />
-                  </button>
-                  
-                  {/* Delete Module */}
-                  {isSuperAdmin && (
-                    <button 
-                      onClick={() => handleDeleteModule(module)}
-                      disabled={isSaving && deletingId === module.id}
-                      className="flex items-center justify-center gap-2 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
-                      title="Eliminar módulo"
-                    >
-                      {isSaving && deletingId === module.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
       
       <AddModuleModal
@@ -220,5 +197,161 @@ export default function AcademyPage() {
         moduleTitle={suggestingModule?.title || ""}
       />
     </div>
+  );
+}
+
+// Sortable Module Card Component
+interface SortableModuleCardProps {
+  module: Module;
+  index: number;
+  isSuperAdmin: boolean;
+  isSaving: boolean;
+  deletingId: number | null;
+  onEdit: (module: Module) => void;
+  onDelete: (module: Module) => void;
+  onSuggest: (module: Module) => void;
+  onNavigate: (id: number) => void;
+}
+
+function SortableModuleCard({
+  module,
+  index,
+  isSuperAdmin,
+  isSaving,
+  deletingId,
+  onEdit,
+  onDelete,
+  onSuggest,
+  onNavigate,
+}: SortableModuleCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: module.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <motion.div
+      ref={setNodeRef}
+      style={style}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1 }}
+      className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:shadow-lg"
+    >
+      <div 
+        className="relative aspect-square w-full overflow-hidden bg-gray-100 cursor-pointer"
+        onClick={() => onNavigate(module.id)}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={module.image || "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1000&auto=format&fit=crop"}
+          alt={module.title}
+          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-black/10 transition-colors group-hover:bg-black/0" />
+        
+        {/* Status badges */}
+        <div className="absolute top-4 left-4 flex flex-col gap-2">
+          {module.status === "DRAFT" && (
+            <span className="rounded-lg bg-amber-500 px-2 py-1 text-xs font-bold text-white">
+              Draft
+            </span>
+          )}
+          {module.status === "ARCHIVED" && (
+            <span className="rounded-lg bg-gray-500 px-2 py-1 text-xs font-bold text-white">
+              Archived
+            </span>
+          )}
+          {module.visibleForSkillBuilder && (
+            <span className="flex items-center gap-1 rounded-lg bg-green-500 px-2 py-1 text-xs font-bold text-white">
+              <Eye className="h-3 w-3" />
+              Skill Builder
+            </span>
+          )}
+        </div>
+        
+        <div className="absolute top-4 right-4 flex gap-2">
+          {/* Drag handle */}
+          <button
+            {...attributes}
+            {...listeners}
+            className="rounded-lg bg-white/90 p-2 text-gray-700 shadow-sm hover:text-brand-primary cursor-grab active:cursor-grabbing"
+            title="Arrastrar para reordenar"
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+          <button 
+            onClick={(e) => { e.stopPropagation(); onSuggest(module); }}
+            className="rounded-lg bg-white/90 p-2 text-gray-700 shadow-sm hover:text-brand-primary"
+            title="Suggest to Student"
+          >
+            <Send className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-1 flex-col p-5">
+        <div className="flex items-start justify-between">
+          <h4 className="font-display text-lg font-bold text-brand-primary">
+            {module.title}
+          </h4>
+          <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-bold text-gray-600">
+            {module.lessonsCount || 0} Lessons
+          </span>
+        </div>
+        
+        <p className="mt-2 line-clamp-2 text-sm text-gray-600">
+          {module.description}
+        </p>
+
+        <div className="mt-6 flex items-center gap-2 pt-4 border-t border-gray-100">
+          {/* Manage Lessons - Primary action */}
+          <button
+            onClick={() => onNavigate(module.id)}
+            className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-brand-cyan-dark px-3 py-2 text-sm font-semibold text-white hover:bg-brand-cyan transition-colors"
+          >
+            <Video className="h-4 w-4" />
+            Lecciones
+          </button>
+          
+          {/* Edit Module */}
+          <button
+            onClick={() => onEdit(module)}
+            className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:border-brand-primary hover:text-brand-primary transition-colors"
+            title="Editar módulo"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
+          
+          {/* Delete Module */}
+          {isSuperAdmin && (
+            <button 
+              onClick={() => onDelete(module)}
+              disabled={isSaving && deletingId === module.id}
+              className="flex items-center justify-center gap-2 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
+              title="Eliminar módulo"
+            >
+              {isSaving && deletingId === module.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+    </motion.div>
   );
 }
