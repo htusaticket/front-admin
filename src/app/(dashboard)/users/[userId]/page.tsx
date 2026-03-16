@@ -85,6 +85,7 @@ export default function UserDetailPage() {
     fetchUserDetails,
     updateUserStatus,
     updateUserNotes,
+    removePunishment,
     clearSelectedUser, 
   } = useUsersStore();
 
@@ -142,6 +143,12 @@ export default function UserDetailPage() {
     setIsMenuOpen(false);
   };
 
+  const handleRemovePunishment = async () => {
+    if (!userId) return;
+    if (!confirm("Are you sure you want to remove this user's punishment? This will also clear all their strikes.")) return;
+    await removePunishment(userId);
+  };
+
   // Pagination for classes
   const enrollments = user?.enrollments || [];
   const classesTotalPages = Math.ceil(enrollments.length / itemsPerPage);
@@ -170,7 +177,7 @@ export default function UserDetailPage() {
     },
     { 
       label: "Active Strikes", 
-      value: (user.strikes?.length || 0).toString(), 
+      value: (user.strikes?.count || 0).toString(), 
       icon: AlertTriangle, 
       color: "text-amber-600", 
       bg: "bg-amber-100", 
@@ -334,6 +341,17 @@ export default function UserDetailPage() {
                       >
                         Issue Strike
                       </button>
+                      {user.isPunished && (
+                        <button 
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            handleRemovePunishment();
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-sm font-medium text-green-600 hover:bg-green-50 transition-colors"
+                        >
+                          Remove Punishment
+                        </button>
+                      )}
                       <div className="border-t border-gray-100 my-1" />
                       {user.status === "SUSPENDED" ? (
                         <button 
@@ -544,6 +562,51 @@ export default function UserDetailPage() {
         {/* Strikes Tab */}
         {activeTab === "strikes" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+            {/* Punishment Banner */}
+            {user.isPunished && (
+              <div className="rounded-2xl border-2 border-red-200 bg-red-50 p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-red-800">User is currently punished</p>
+                    {user.punishedUntil && (
+                      <p className="text-sm text-red-600">
+                        Restricted until: {new Date(user.punishedUntil).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {isSuperAdmin && (
+                  <button
+                    onClick={handleRemovePunishment}
+                    className="rounded-xl bg-white border border-red-300 text-red-600 px-4 py-2 text-sm font-bold hover:bg-red-100 transition-colors"
+                  >
+                    Remove Punishment
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Strike info summary */}
+            {user.strikes && (
+              <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm flex items-center justify-between">
+                <div className="flex items-center gap-6">
+                  <div>
+                    <p className="text-sm text-gray-500">Active Strikes</p>
+                    <p className="text-2xl font-bold text-gray-900">{user.strikes.count} / {user.strikes.maxStrikes}</p>
+                  </div>
+                  {user.strikes.resetDate && (
+                    <div>
+                      <p className="text-sm text-gray-500">Reset Date</p>
+                      <p className="text-sm font-medium text-gray-900">{formatDate(user.strikes.resetDate)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {isSuperAdmin && (
               <div className="flex justify-end">
                 <button 
@@ -556,7 +619,7 @@ export default function UserDetailPage() {
               </div>
             )}
              
-            {user.strikes && user.strikes.length > 0 ? (
+            {user.strikes?.history && user.strikes.history.length > 0 ? (
               <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -568,7 +631,7 @@ export default function UserDetailPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
-                    {user.strikes.map((strike) => (
+                    {user.strikes.history.map((strike) => (
                       <tr key={strike.id}>
                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                           {formatDate(strike.createdAt)}
@@ -577,7 +640,7 @@ export default function UserDetailPage() {
                           {strike.reason}
                         </td>
                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                          {strike.classSession?.topic || "-"}
+                          {strike.classTitle || "-"}
                         </td>
                         <td className="whitespace-nowrap px-6 py-4">
                           <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${

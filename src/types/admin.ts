@@ -105,12 +105,28 @@ export interface AdminUserDetail extends AdminUser {
   adminNotes: string | null;
   startDate: string | null;
   endDate: string | null;
-  strikes: Strike[];
+  strikes: UserStrikesInfo;
   enrollments: UserEnrollment[];
   academyProgress: AcademyProgress[];
   subscription: Subscription | null;
 }
 
+export interface UserStrikesInfo {
+  count: number;
+  maxStrikes: number;
+  resetDate: string | null;
+  history: StrikeDetail[];
+}
+
+export interface StrikeDetail {
+  id: number;
+  reason: string;
+  createdAt: string;
+  isManual: boolean;
+  classTitle: string | null;
+}
+
+// Legacy - keep for backward compatibility
 export interface Strike {
   id: number;
   reason: string;
