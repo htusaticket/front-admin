@@ -6,7 +6,8 @@ import {
   Plus, 
   Search, 
   Edit2, 
-  Trash2, 
+  Trash2,
+  Ban,
   UserCog,
   Loader2,
   CheckCircle,
@@ -19,6 +20,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 
+import { useModalLock } from "@/hooks/useModalLock";
 import api, { getErrorMessage } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 import type { ApiResponse } from "@/types/admin";
@@ -59,6 +61,7 @@ export default function AdminsManagementPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showPermanentDeleteModal, setShowPermanentDeleteModal] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -69,6 +72,18 @@ export default function AdminsManagementPage() {
     lastName: "",
     role: "ADMIN" as "ADMIN" | "SUPERADMIN",
     temporaryPassword: "",
+  });
+
+  // Lock body scroll and escape for modals
+  useModalLock(showCreateModal, () => { setShowCreateModal(false); setError(null); resetForm(); });
+  useModalLock(showEditModal, () => {
+    setShowEditModal(false); setSelectedAdmin(null); setError(null); resetForm();
+  });
+  useModalLock(showDeleteModal, () => {
+    setShowDeleteModal(false); setSelectedAdmin(null); setError(null);
+  });
+  useModalLock(showPermanentDeleteModal, () => {
+    setShowPermanentDeleteModal(false); setSelectedAdmin(null); setError(null);
   });
 
   // Fetch admins
@@ -154,12 +169,19 @@ export default function AdminsManagementPage() {
     setError(null);
     
     try {
-      await api.patch(`/api/admin/users/${selectedAdmin.id}`, {
+      const updateData: Record<string, string | undefined> = {
         email: formData.email || undefined,
         firstName: formData.firstName || undefined,
         lastName: formData.lastName || undefined,
         role: formData.role,
-      });
+      };
+      
+      // Include password if provided
+      if (formData.temporaryPassword) {
+        updateData.password = formData.temporaryPassword;
+      }
+      
+      await api.patch(`/api/admin/users/${selectedAdmin.id}`, updateData);
       
       setShowEditModal(false);
       setSelectedAdmin(null);
@@ -173,21 +195,41 @@ export default function AdminsManagementPage() {
     }
   };
 
-  // Suspend/Delete admin
-  const handleDelete = async () => {
+  // Suspend admin
+  const handleSuspend = async () => {
     if (!selectedAdmin) return;
     
     setIsSubmitting(true);
     setError(null);
     
     try {
-      // We suspend instead of deleting
       await api.patch(`/api/admin/users/${selectedAdmin.id}/status`, {
         status: "SUSPENDED",
         reason: "Suspended by superadmin",
       });
       
       setShowDeleteModal(false);
+      setSelectedAdmin(null);
+      fetchAdmins();
+    } catch (err) {
+      const errorMessage = getErrorMessage(err);
+      setError(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Permanently delete admin
+  const handlePermanentDelete = async () => {
+    if (!selectedAdmin) return;
+    
+    setIsSubmitting(true);
+    setError(null);
+    
+    try {
+      await api.delete(`/api/admin/users/${selectedAdmin.id}`);
+      
+      setShowPermanentDeleteModal(false);
       setSelectedAdmin(null);
       fetchAdmins();
     } catch (err) {
@@ -235,10 +277,16 @@ export default function AdminsManagementPage() {
     setShowEditModal(true);
   };
 
-  // Open delete modal
+  // Open delete/suspend modal
   const openDeleteModal = (admin: Admin) => {
     setSelectedAdmin(admin);
     setShowDeleteModal(true);
+  };
+
+  // Open permanent delete modal
+  const openPermanentDeleteModal = (admin: Admin) => {
+    setSelectedAdmin(admin);
+    setShowPermanentDeleteModal(true);
   };
 
   // If not SUPERADMIN, show nothing while redirecting
@@ -413,12 +461,19 @@ export default function AdminsManagementPage() {
                         {admin.status !== "SUSPENDED" && (
                           <button
                             onClick={() => openDeleteModal(admin)}
-                            className="rounded-lg p-2 text-red-600 hover:bg-red-50 transition-colors"
+                            className="rounded-lg p-2 text-amber-600 hover:bg-amber-50 transition-colors"
                             title="Suspend"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Ban className="h-4 w-4" />
                           </button>
                         )}
+                        <button
+                          onClick={() => openPermanentDeleteModal(admin)}
+                          className="rounded-lg p-2 text-red-600 hover:bg-red-50 transition-colors"
+                          title="Delete permanently"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     )}
 
@@ -435,11 +490,15 @@ export default function AdminsManagementPage() {
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => { setShowCreateModal(false); setError(null); resetForm(); }}
+        >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
           >
             <h2 className="font-display text-xl font-bold text-brand-primary mb-4">
               Create New Admin
@@ -503,7 +562,7 @@ export default function AdminsManagementPage() {
 
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">
-                  Temporary Password *
+                  Password *
                 </label>
                 <input
                   type="password"
@@ -513,7 +572,7 @@ export default function AdminsManagementPage() {
                   placeholder="••••••••"
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  The user will need to change this password on first login.
+                  Minimum 6 characters.
                 </p>
               </div>
             </div>
@@ -550,11 +609,15 @@ export default function AdminsManagementPage() {
 
       {/* Edit Modal */}
       {showEditModal && selectedAdmin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => { setShowEditModal(false); setSelectedAdmin(null); setError(null); resetForm(); }}
+        >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
           >
             <h2 className="font-display text-xl font-bold text-brand-primary mb-4">
               Edit Admin
@@ -611,6 +674,22 @@ export default function AdminsManagementPage() {
                   <option value="SUPERADMIN">Super Admin</option>
                 </select>
               </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  value={formData.temporaryPassword}
+                  onChange={(e) => setFormData({ ...formData, temporaryPassword: e.target.value })}
+                  className="w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-900 outline-none focus:border-brand-primary placeholder:text-gray-400"
+                  placeholder="Leave blank to keep current password"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Only fill this if you want to change the admin&apos;s password.
+                </p>
+              </div>
             </div>
 
             {error && (
@@ -646,15 +725,19 @@ export default function AdminsManagementPage() {
 
       {/* Delete/Suspend Confirmation Modal */}
       {showDeleteModal && selectedAdmin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => { setShowDeleteModal(false); setSelectedAdmin(null); setError(null); }}
+        >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+                <Ban className="h-6 w-6 text-amber-600" />
               </div>
               <h2 className="mt-4 font-display text-xl font-bold text-gray-900">
                 Suspend Admin
@@ -688,12 +771,72 @@ export default function AdminsManagementPage() {
                 Cancel
               </button>
               <button
-                onClick={handleDelete}
+                onClick={handleSuspend}
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700 disabled:opacity-50"
+              >
+                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                Suspend
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Permanent Delete Confirmation Modal */}
+      {showPermanentDeleteModal && selectedAdmin && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => { setShowPermanentDeleteModal(false); setSelectedAdmin(null); setError(null); }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <h2 className="mt-4 font-display text-xl font-bold text-gray-900">
+                  Delete Permanently
+              </h2>
+              <p className="mt-2 text-sm text-gray-500">
+                  Are you sure you want to <span className="font-bold text-red-600">permanently delete</span>{" "}
+                <span className="font-bold">
+                  {selectedAdmin.firstName 
+                    ? `${selectedAdmin.firstName} ${selectedAdmin.lastName}`
+                    : selectedAdmin.email}
+                </span>
+                  ? This will remove the account and all associated data. This action <span className="font-bold text-red-600">cannot be undone</span>.
+              </p>
+            </div>
+
+            {error && (
+              <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+
+            <div className="mt-6 flex gap-3 justify-center">
+              <button
+                onClick={() => {
+                  setShowPermanentDeleteModal(false);
+                  setSelectedAdmin(null);
+                  setError(null);
+                }}
+                className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-bold text-gray-600 hover:bg-gray-50"
+              >
+                  Cancel
+              </button>
+              <button
+                onClick={handlePermanentDelete}
                 disabled={isSubmitting}
                 className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"
               >
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                Suspend
+                  Delete Permanently
               </button>
             </div>
           </motion.div>

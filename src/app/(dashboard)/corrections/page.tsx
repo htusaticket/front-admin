@@ -218,6 +218,11 @@ export default function CorrectionsPage() {
         onClose={() => {
           setIsReviewModalOpen(false);
           setSelectedSubmission(null);
+          // Auto-refresh submissions after review
+          fetchSubmissions({ 
+            limit: 50,
+            status: activeTab !== "ALL" ? activeTab : undefined, 
+          });
         }}
         submission={selectedSubmission}
       />

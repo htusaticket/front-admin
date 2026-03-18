@@ -216,14 +216,21 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
         data,
       );
       
-      // Actualizar notas en el usuario seleccionado
+      // Re-fetch user details to get the updated JSON notes structure
+      // instead of optimistically setting plain text which breaks the per-admin JSON format
       if (get().selectedUser?.id === userId) {
-        set(state => ({
-          selectedUser: state.selectedUser 
-            ? { ...state.selectedUser, adminNotes: data.notes }
-            : null,
-          isLoading: false,
-        }));
+        try {
+          const detailResponse = await api.get<ApiResponse<AdminUserDetail>>(
+            `/api/admin/users/${userId}/details`,
+          );
+          set({
+            selectedUser: detailResponse.data.data,
+            isLoading: false,
+          });
+        } catch {
+          // If re-fetch fails, just clear loading
+          set({ isLoading: false });
+        }
       } else {
         set({ isLoading: false });
       }

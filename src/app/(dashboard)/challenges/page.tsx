@@ -114,7 +114,8 @@ export default function ChallengesPage() {
         <div className="grid grid-cols-7 gap-4">
           {next7Days.map((day) => {
             const challenge = getChallengeForDate(day.date);
-            const isToday = day.date === today.toISOString().split("T")[0];
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+            const isToday = day.date === todayStr;
 
             return (
               <div 

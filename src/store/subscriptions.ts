@@ -85,6 +85,7 @@ const initialState: SubscriptionsState = {
   filters: {
     page: 1,
     limit: 10,
+    search: "",
   },
 };
 

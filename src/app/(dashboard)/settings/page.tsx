@@ -240,7 +240,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-sm text-gray-900">Version</p>
-                  <p className="text-xs text-gray-500">JFalcon Admin Panel</p>
+                  <p className="text-xs text-gray-500">HTE Admin Panel</p>
                 </div>
               </div>
               <span className="px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-700">

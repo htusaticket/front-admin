@@ -17,7 +17,7 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpen,
   Send,
@@ -28,12 +28,14 @@ import {
   Video,
   Settings,
   GripVertical,
+  AlertTriangle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 
 import { AddModuleModal } from "@/components/academy/AddModuleModal";
 import { SuggestCourseModal } from "@/components/academy/SuggestCourseModal";
+import { useModalLock } from "@/hooks/useModalLock";
 import { useAcademyStore, type Module } from "@/store/academy";
 import { useAuthStore } from "@/store/auth";
 
@@ -54,12 +56,16 @@ export default function AcademyPage() {
   const [editingModule, setEditingModule] = useState<Module | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [orderedModules, setOrderedModules] = useState<Module[]>([]);
+  const [moduleToDelete, setModuleToDelete] = useState<Module | null>(null);
   
   // Suggestion State
   const [isSuggestOpen, setIsSuggestOpen] = useState(false);
   const [suggestingModule, setSuggestingModule] = useState<Module | null>(null);
 
   const isSuperAdmin = user?.role === "SUPERADMIN";
+
+  // Lock body scroll and escape for delete modal
+  useModalLock(!!moduleToDelete, () => setModuleToDelete(null));
 
   // DnD sensors
   const sensors = useSensors(
@@ -109,12 +115,15 @@ export default function AcademyPage() {
     if (!isSuperAdmin) {
       return;
     }
-    
-    if (confirm(`¿Estás seguro de eliminar el módulo "${module.title}"? Esta acción no se puede deshacer.`)) {
-      setDeletingId(module.id);
-      await deleteModule(module.id);
-      setDeletingId(null);
-    }
+    setModuleToDelete(module);
+  };
+
+  const confirmDeleteModule = async () => {
+    if (!moduleToDelete) return;
+    setDeletingId(moduleToDelete.id);
+    await deleteModule(moduleToDelete.id);
+    setDeletingId(null);
+    setModuleToDelete(null);
   };
 
   if (isLoading && modules.length === 0) {
@@ -196,6 +205,62 @@ export default function AcademyPage() {
         onClose={() => setIsSuggestOpen(false)}
         moduleTitle={suggestingModule?.title || ""}
       />
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {moduleToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onClick={() => setModuleToDelete(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                </div>
+                <h2 className="mt-4 font-display text-xl font-bold text-gray-900">
+                    Eliminar Módulo
+                </h2>
+                <p className="mt-2 text-sm text-gray-500">
+                    ¿Estás seguro de eliminar el módulo{" "}
+                  <span className="font-bold text-gray-700">&quot;{moduleToDelete.title}&quot;</span>?
+                    Esta acción no se puede deshacer.
+                </p>
+              </div>
+
+              <div className="mt-6 flex gap-3 justify-center">
+                <button
+                  onClick={() => setModuleToDelete(null)}
+                  className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                    Cancelar
+                </button>
+                <button
+                  onClick={confirmDeleteModule}
+                  disabled={deletingId !== null}
+                  className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  {deletingId !== null ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                    Eliminar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
