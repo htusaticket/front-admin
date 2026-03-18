@@ -15,6 +15,7 @@ interface SubmissionsState {
   page: number;
   limit: number;
   totalPages: number;
+  pendingCount: number;
   isLoading: boolean;
   error: string | null;
 }
@@ -37,6 +38,7 @@ const initialState: SubmissionsState = {
   page: 1,
   limit: 10,
   totalPages: 0,
+  pendingCount: 0,
   isLoading: false,
   error: null,
 };
@@ -64,9 +66,10 @@ export const useSubmissionsStore = create<SubmissionsStore>((set, _get) => ({
         total: number; 
         page: number; 
         limit: number; 
-        totalPages: number 
+        totalPages: number;
+        stats?: { pending: number; approved: number; needsImprovement: number };
       };
-      const { submissions, total, page, limit, totalPages } = responseData;
+      const { submissions, total, page, limit, totalPages, stats } = responseData;
       
       set({ 
         submissions: submissions || [], 
@@ -74,6 +77,7 @@ export const useSubmissionsStore = create<SubmissionsStore>((set, _get) => ({
         page, 
         limit, 
         totalPages,
+        ...(stats != null ? { pendingCount: stats.pending } : {}),
         isLoading: false, 
       });
     } catch (error) {

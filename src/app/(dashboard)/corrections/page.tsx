@@ -39,6 +39,7 @@ export default function CorrectionsPage() {
     submissions, 
     isLoading, 
     error,
+    pendingCount,
     fetchSubmissions, 
   } = useSubmissionsStore();
 
@@ -66,8 +67,6 @@ export default function CorrectionsPage() {
     setSelectedSubmission(submission);
     setIsReviewModalOpen(true);
   };
-
-  const pendingCount = submissions.filter(s => s.status === "PENDING").length;
 
   return (
     <div className="space-y-8">

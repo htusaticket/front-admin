@@ -57,8 +57,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
       const { accessToken, user } = data;
 
-      // Verificar que el usuario sea ADMIN o SUPERADMIN
-      if (user.role !== "ADMIN" && user.role !== "SUPERADMIN") {
+      // Verificar que el usuario sea ADMIN, SUPERADMIN o JOB_UPLOADER
+      if (user.role !== "ADMIN" && user.role !== "SUPERADMIN" && user.role !== "JOB_UPLOADER") {
         set({
           isLoading: false,
           error: "No tienes permisos de administrador",
@@ -122,7 +122,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const user = response.data.data;
 
       // Verificar rol admin
-      if (user.role !== "ADMIN" && user.role !== "SUPERADMIN") {
+      if (user.role !== "ADMIN" && user.role !== "SUPERADMIN" && user.role !== "JOB_UPLOADER") {
         get().logout();
         throw new Error("No tienes permisos de administrador");
       }

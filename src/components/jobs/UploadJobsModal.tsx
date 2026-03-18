@@ -127,15 +127,41 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
 
   const handleSubmit = async () => {
     // Transform parsed jobs to API format
-    const jobsToCreate = parsedJobs.map(job => ({
-      title: job.title,
-      company: job.name || "Unknown Company",
-      location: "Remote", // Default, would need parsing if provided
-      description: job.offer || job.notes || "Job offer from bulk upload",
-      type: job.hiring || "Full-time",
-      salaryRange: job.ote || undefined,
-      requirements: job.offer ? [job.offer] : [],
-    }));
+    const jobsToCreate = parsedJobs.map(job => {
+      // Parse OTE string like "$45,000 - $60,000" or "45000/60000" into min/max
+      let oteMin: number | undefined;
+      let oteMax: number | undefined;
+      if (job.ote) {
+        const numbers = job.ote.match(/[\d,]+/g)?.map(n => parseInt(n.replace(/,/g, ""), 10)).filter(n => !isNaN(n));
+        if (numbers && numbers.length >= 2) {
+          oteMin = Math.min(numbers[0], numbers[1]);
+          oteMax = Math.max(numbers[0], numbers[1]);
+        } else if (numbers && numbers.length === 1) {
+          oteMin = numbers[0];
+          oteMax = numbers[0];
+        }
+      }
+
+      // Parse revenue
+      let revenue: number | undefined;
+      if (job.revenue) {
+        const revenueNum = parseInt(job.revenue.replace(/[^0-9]/g, ""), 10);
+        if (!isNaN(revenueNum)) revenue = revenueNum;
+      }
+
+      return {
+        title: job.title,
+        company: job.name || "Unknown Company",
+        location: "Remote",
+        description: job.offer || job.notes || "Job offer from bulk upload",
+        type: job.hiring || "Setter",
+        salaryRange: job.ote || undefined,
+        oteMin,
+        oteMax,
+        revenue,
+        requirements: job.offer ? [job.offer] : [],
+      };
+    });
     
     await bulkCreateJobs(jobsToCreate);
     setParsedJobs([]);
