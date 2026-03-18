@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
+import { toast } from "sonner";
 
 import { useAuthStore } from "@/store/auth";
 import { useSystemConfigStore } from "@/store/systemConfig";
@@ -81,10 +82,31 @@ export default function SettingsPage() {
   };
 
   const handleSavePolicy = async () => {
+    const maxStrikes = parseInt(formValues.maxStrikesForPunishment) || 3;
+    const lateCancellation = parseInt(formValues.lateCancellationHours) || 2;
+    const punishmentDays = parseInt(formValues.punishmentDurationDays) || 7;
+
+    if (maxStrikes > 10) {
+      toast.error("Strike limit cannot be greater than 10");
+      return;
+    }
+    if (maxStrikes < 1) {
+      toast.error("Strike limit must be at least 1");
+      return;
+    }
+    if (lateCancellation < 1) {
+      toast.error("Late cancellation threshold must be at least 1 hour");
+      return;
+    }
+    if (punishmentDays < 1) {
+      toast.error("Punishment duration must be at least 1 day");
+      return;
+    }
+
     await updateConfig({
-      lateCancellationHours: parseInt(formValues.lateCancellationHours) || 2,
-      maxStrikesForPunishment: parseInt(formValues.maxStrikesForPunishment) || 3,
-      punishmentDurationDays: parseInt(formValues.punishmentDurationDays) || 7,
+      lateCancellationHours: lateCancellation,
+      maxStrikesForPunishment: maxStrikes,
+      punishmentDurationDays: punishmentDays,
     });
   };
 

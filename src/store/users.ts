@@ -121,7 +121,39 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
         `/api/admin/users/${userId}/details`,
       );
       
-      set({ selectedUser: response.data.data, isLoading: false });
+      // Map backend moduleProgress to frontend academyProgress
+      const data = response.data.data;
+      const raw = data as unknown as Record<string, unknown>;
+      if (!data.academyProgress && raw.moduleProgress) {
+        const mp = raw.moduleProgress as { moduleId: number; moduleTitle: string; progress: number; status: string }[];
+        data.academyProgress = mp.map((m) => ({
+          courseId: m.moduleId,
+          courseName: m.moduleTitle,
+          progress: m.progress,
+          completedLessons: m.progress === 100 ? 1 : 0,
+          totalLessons: 1,
+        }));
+      }
+
+      // Map backend enrollments (title/startTime) to frontend type (topic/scheduledAt)
+      if (raw.enrollments && Array.isArray(raw.enrollments)) {
+        data.enrollments = (raw.enrollments as Array<Record<string, unknown>>).map((e) => {
+          const cs = e.classSession as Record<string, unknown>;
+          return {
+            id: String(e.id),
+            attendanceStatus: (e.attendanceStatus as import("@/types/admin").AttendanceStatus) || null,
+            attendanceMarkedAt: (e.attendanceMarkedAt as string) || null,
+            classSession: {
+              id: cs.id as number,
+              topic: (cs.topic as string) || (cs.title as string) || "",
+              scheduledAt: (cs.scheduledAt as string) || (cs.startTime as string) || "",
+              type: cs.type as string,
+            },
+          };
+        });
+      }
+      
+      set({ selectedUser: data, isLoading: false });
     } catch (error) {
       const errorMessage = getErrorMessage(error);
       set({ error: errorMessage, isLoading: false });
@@ -282,8 +314,7 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
       return { success: true, message: response.data.message };
     } catch (error) {
       const errorMessage = getErrorMessage(error);
-      set({ error: errorMessage, isLoading: false });
-      toast.error(errorMessage);
+      set({ isLoading: false });
       return { success: false, message: errorMessage };
     }
   },

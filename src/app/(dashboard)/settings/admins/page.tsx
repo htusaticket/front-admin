@@ -175,8 +175,8 @@ export default function AdminsManagementPage() {
         lastName: formData.lastName || undefined,
         role: formData.role,
       };
-      
-      // Include password if provided
+
+      // Include password if superadmin wants to change it
       if (formData.temporaryPassword) {
         updateData.password = formData.temporaryPassword;
       }
@@ -677,17 +677,18 @@ export default function AdminsManagementPage() {
 
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">
-                  New Password
+                  Nueva Contraseña
                 </label>
                 <input
                   type="password"
                   value={formData.temporaryPassword}
                   onChange={(e) => setFormData({ ...formData, temporaryPassword: e.target.value })}
                   className="w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-900 outline-none focus:border-brand-primary placeholder:text-gray-400"
-                  placeholder="Leave blank to keep current password"
+                  placeholder="Dejar vacío para mantener la actual"
+                  minLength={6}
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Only fill this if you want to change the admin&apos;s password.
+                  Mínimo 6 caracteres. Solo completar si deseas cambiar la contraseña.
                 </p>
               </div>
             </div>

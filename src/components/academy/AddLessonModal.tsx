@@ -89,6 +89,7 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [fileSizeError, setFileSizeError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Calculate next available order
@@ -128,31 +129,43 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Auto-fix order conflict: if order already taken, use next available
+    let finalOrder = formData.order;
+    if (!initialData) {
+      const existingOrders = (selectedModule?.lessons || []).map(l => l.order);
+      while (existingOrders.includes(finalOrder)) {
+        finalOrder++;
+      }
+    }
+
     const lessonData = {
       title: formData.title,
       description: formData.description || undefined,
       duration: formData.duration,
       contentUrl: formData.contentUrl || undefined,
-      order: formData.order,
+      order: initialData ? formData.order : finalOrder,
     };
     
     if (initialData) {
       // Update existing lesson
       const result = await updateLesson(initialData.id, lessonData);
       
-      if (result.success) {
+      if (result.success && pendingFiles.length > 0) {
         // Upload any pending files
+        setIsUploading(true);
         for (const file of pendingFiles) {
           await uploadResource(initialData.id, file);
         }
-        onClose();
+        setIsUploading(false);
       }
+      if (result.success) onClose();
     } else {
       // Create new lesson, then upload pending files
       const result = await createLesson(moduleId, lessonData);
       if (result.success) {
         // If there are pending files, get the new lesson from the refreshed module
         if (pendingFiles.length > 0) {
+          setIsUploading(true);
           const store = useAcademyStore.getState();
           const mod = store.selectedModule;
           if (mod?.lessons) {
@@ -163,6 +176,7 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
               }
             }
           }
+          setIsUploading(false);
         }
         onClose();
       }
@@ -333,14 +347,26 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
                             Duración *
                         </div>
                       </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Ej: 15 min"
-                        value={formData.duration}
-                        onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
-                      />
+                      <div className="relative">
+                        <input
+                          type="number"
+                          required
+                          min="1"
+                          placeholder="Ej: 15"
+                          value={formData.duration}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, "");
+                            setFormData({ ...formData, duration: val });
+                          }}
+                          onKeyDown={(e) => {
+                            if (["e", "E", "+", "-", ".", ","].includes(e.key)) {
+                              e.preventDefault();
+                            }
+                          }}
+                          className="w-full rounded-xl border border-gray-200 px-4 py-2.5 pr-12 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-400">min</span>
+                      </div>
                     </div>
                       
                     <div>
@@ -367,7 +393,7 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
                       ) && (
                         <p className="mt-1 flex items-center gap-1 text-xs text-amber-600">
                           <AlertTriangle className="h-3 w-3" />
-                            Ya existe una lección con este orden. Se reordenará automáticamente.
+                            Ya existe una lección con este orden. Se asignará el siguiente disponible.
                         </p>
                       )}
                     </div>
@@ -512,6 +538,14 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
                       <p className="text-xs font-semibold text-gray-500 uppercase">
                           Archivos pendientes de subir
                       </p>
+                      {isUploading && (
+                        <div className="flex items-center gap-3 rounded-lg border border-brand-primary/30 bg-brand-primary/5 p-3">
+                          <Loader2 className="h-5 w-5 animate-spin text-brand-primary" />
+                          <p className="text-sm font-medium text-brand-primary">
+                              Subiendo archivos... no cierres esta ventana
+                          </p>
+                        </div>
+                      )}
                       {pendingFiles.map((file, index) => (
                         <div
                           key={`pending-${file.name}-${file.size}-${file.lastModified}`}
@@ -548,16 +582,22 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
                   <button
                     type="button"
                     onClick={onClose}
-                    className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+                    disabled={isUploading}
+                    className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                   >
                       Cancelar
                   </button>
                   <button
                     type="submit"
-                    disabled={isSaving || !formData.title || !formData.duration}
+                    disabled={isSaving || isUploading || !formData.title || !formData.duration}
                     className="flex items-center gap-2 rounded-xl bg-brand-cyan-dark px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-cyan-dark/20 transition-all hover:bg-brand-cyan disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isSaving ? (
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                          Subiendo archivos...
+                      </>
+                    ) : isSaving ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
                           Guardando...
