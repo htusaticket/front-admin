@@ -18,10 +18,12 @@ interface RequirementItem {
 }
 
 const JOB_TYPES = [
+  { value: "Setter", label: "Setter" },
+  { value: "Closer", label: "Closer" },
+  { value: "DM & Phone Setter", label: "DM & Phone Setter" },
   { value: "Full-time", label: "Full-time" },
   { value: "Part-time", label: "Part-time" },
   { value: "Contract", label: "Contract" },
-  { value: "Freelance", label: "Freelance" },
 ];
 
 export function CreateJobModal({ isOpen, onClose }: CreateJobModalProps) {
@@ -41,7 +43,7 @@ export function CreateJobModal({ isOpen, onClose }: CreateJobModalProps) {
     oteMin: "",
     oteMax: "",
     revenue: "",
-    type: "Full-time",
+    type: "Setter",
     description: "",
   });
 

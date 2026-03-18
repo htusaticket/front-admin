@@ -20,8 +20,8 @@ export default function Login() {
     const role = Cookies.get("userRole");
     const status = Cookies.get("userStatus");
     
-    if (token && (role === "ADMIN" || role === "SUPERADMIN") && status === "ACTIVE") {
-      router.replace("/dashboard");
+    if (token && (role === "ADMIN" || role === "SUPERADMIN" || role === "JOB_UPLOADER") && status === "ACTIVE") {
+      router.replace(role === "JOB_UPLOADER" ? "/jobs" : "/dashboard");
     }
   }, [router]);
   
@@ -75,7 +75,8 @@ export default function Login() {
     });
 
     if (result.success) {
-      router.push("/dashboard");
+      const role = Cookies.get("userRole");
+      router.push(role === "JOB_UPLOADER" ? "/jobs" : "/dashboard");
     }
   };
 

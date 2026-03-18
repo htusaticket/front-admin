@@ -19,10 +19,12 @@ interface RequirementItem {
 }
 
 const JOB_TYPES = [
+  { value: "Setter", label: "Setter" },
+  { value: "Closer", label: "Closer" },
+  { value: "DM & Phone Setter", label: "DM & Phone Setter" },
   { value: "Full-time", label: "Full-time" },
   { value: "Part-time", label: "Part-time" },
   { value: "Contract", label: "Contract" },
-  { value: "Freelance", label: "Freelance" },
 ];
 
 export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
@@ -40,7 +42,7 @@ export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
     oteMin: "",
     oteMax: "",
     revenue: "",
-    type: "Full-time",
+    type: "Setter",
     description: "",
     isActive: true,
   });
@@ -59,7 +61,7 @@ export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
         oteMin: job.oteMin ? String(job.oteMin) : "",
         oteMax: job.oteMax ? String(job.oteMax) : "",
         revenue: job.revenue ? String(job.revenue) : "",
-        type: job.type || "Full-time",
+        type: job.type || "Setter",
         description: job.description || "",
         isActive: job.isActive ?? true,
       });

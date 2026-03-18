@@ -15,27 +15,30 @@ import {
   Plus,
   Pencil,
 } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 
 import { CreateJobModal } from "@/components/jobs/CreateJobModal";
 import { EditJobModal } from "@/components/jobs/EditJobModal";
 import { UploadJobsModal } from "@/components/jobs/UploadJobsModal";
+import { Pagination } from "@/components/ui/Pagination";
 import { useAuthStore } from "@/store/auth";
 import { useJobsStore, type JobOffer } from "@/store/jobs";
-
-const JOB_TYPES = [
-  { value: "", label: "All Types" },
-  { value: "Full-time", label: "Full-time" },
-  { value: "Part-time", label: "Part-time" },
-  { value: "Contract", label: "Contract" },
-  { value: "Freelance", label: "Freelance" },
-];
 
 const STATUS_OPTIONS = [
   { value: "", label: "All Status" },
   { value: "true", label: "Active" },
   { value: "false", label: "Inactive" },
 ];
+
+const formatSalary = (job: JobOffer): string => {
+  if (job.salaryRange) return job.salaryRange;
+  if (job.oteMin && job.oteMax) {
+    return `$${job.oteMin.toLocaleString()} - $${job.oteMax.toLocaleString()}`;
+  }
+  if (job.oteMin) return `$${job.oteMin.toLocaleString()}`;
+  if (job.oteMax) return `$${job.oteMax.toLocaleString()}`;
+  return "No especificado";
+};
 
 export default function JobsPage() {
   const { user } = useAuthStore();
@@ -44,6 +47,9 @@ export default function JobsPage() {
     isLoading, 
     isSaving, 
     error, 
+    total,
+    page: currentPage,
+    totalPages,
     fetchJobs, 
     deleteJob, 
   } = useJobsStore();
@@ -55,20 +61,59 @@ export default function JobsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [page, setPage] = useState(1);
+  const [knownTypes, setKnownTypes] = useState<Set<string>>(new Set());
+  const itemsPerPage = 12;
   
   const isSuperAdmin = user?.role === "SUPERADMIN";
 
+  // Accumulate unique job types as jobs are loaded
+  useEffect(() => {
+    if (jobs.length > 0) {
+      const newTypes = jobs.map(j => j.type).filter(Boolean);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setKnownTypes(prev => {
+        const updated = new Set(prev);
+        newTypes.forEach(t => updated.add(t));
+        return updated.size !== prev.size ? updated : prev;
+      });
+    }
+  }, [jobs]);
+
+  // Build dynamic type filter options
+  const typeOptions = useMemo(() => {
+    const sorted = [...knownTypes].sort((a, b) => a.localeCompare(b));
+    return [
+      { value: "", label: "All Types" },
+      ...sorted.map(t => ({ value: t, label: t })),
+    ];
+  }, [knownTypes]);
+
   const loadJobs = useCallback(() => {
-    const params: Record<string, string | boolean | number> = {};
+    const params: Record<string, string | boolean | number> = {
+      page,
+      limit: itemsPerPage,
+    };
     if (searchTerm) params.search = searchTerm;
     if (filterType) params.type = filterType;
     if (filterStatus !== "") params.isActive = filterStatus === "true";
     fetchJobs(params);
-  }, [fetchJobs, searchTerm, filterType, filterStatus]);
+  }, [fetchJobs, searchTerm, filterType, filterStatus, page, itemsPerPage]);
   
   useEffect(() => {
     loadJobs();
   }, [loadJobs]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(1);
+  }, [searchTerm, filterType, filterStatus]);
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    setSelectedJob(null);
+  };
   
   useEffect(() => {
     if (jobs.length > 0 && !selectedJob) {
@@ -88,10 +133,7 @@ export default function JobsPage() {
     }
   }, [jobs, selectedJob]);
   
-  const filteredJobs = jobs.filter(job => 
-    job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    job.company.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const filteredJobs = jobs;
   
   const handleDeleteJob = async (jobId: number) => {
     if (!isSuperAdmin) return;
@@ -163,7 +205,7 @@ export default function JobsPage() {
                 Active Job Posts
               </p>
               <p className="mt-1 font-display text-3xl font-bold text-brand-primary">
-                {jobs.length}
+                {total}
               </p>
             </div>
             <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-brand-cyan-dark/10">
@@ -226,7 +268,7 @@ export default function JobsPage() {
           onChange={(e) => setFilterType(e.target.value)}
           className="h-12 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
         >
-          {JOB_TYPES.map((t) => (
+          {typeOptions.map((t) => (
             <option key={t.value} value={t.value}>{t.label}</option>
           ))}
         </select>
@@ -280,7 +322,7 @@ export default function JobsPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <DollarSign className="h-3.5 w-3.5" />
-                      {job.salaryRange || "No especificado"}
+                      {formatSalary(job)}
                     </div>
                   </div>
                   <div className="mt-3 flex items-center justify-between">
@@ -330,7 +372,7 @@ export default function JobsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <DollarSign className="h-4 w-4 text-gray-400" />
-                        <span>{selectedJob.salaryRange || "No especificado"}</span>
+                        <span>{formatSalary(selectedJob)}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Briefcase className="h-4 w-4 text-gray-400" />
@@ -393,6 +435,18 @@ export default function JobsPage() {
           </div>
         </>
       )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+          itemsPerPage={itemsPerPage}
+          totalItems={total}
+        />
+      )}
+
       <UploadJobsModal 
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}

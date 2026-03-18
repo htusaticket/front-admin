@@ -117,13 +117,16 @@ export const Header = () => {
     markAllNotificationsAsRead,
   } = useAdminDashboardStore();
 
-  // Fetch notifications on mount
+  // Fetch notifications on mount (skip for JOB_UPLOADER - they don't need dashboard notifications)
+  const isJobUploader = user?.role === "JOB_UPLOADER";
+  
   useEffect(() => {
+    if (isJobUploader) return;
     fetchNotifications();
     // Refresh every 60 seconds
     const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
-  }, [fetchNotifications]);
+  }, [fetchNotifications, isJobUploader]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -176,117 +179,119 @@ export const Header = () => {
 
         {/* Right Section */}
         <div className="flex items-center gap-2 sm:gap-4">
-          {/* Notifications */}
-          <div className="relative" ref={notificationRef}>
-            <button 
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition-all hover:border-brand-cyan-dark hover:bg-brand-cyan-dark/5 hover:text-brand-cyan-dark"
-            >
-              <Bell className="h-4 w-4" />
-              {unreadCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-            </button>
+          {/* Notifications (hidden for JOB_UPLOADER) */}
+          {!isJobUploader && (
+            <div className="relative" ref={notificationRef}>
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition-all hover:border-brand-cyan-dark hover:bg-brand-cyan-dark/5 hover:text-brand-cyan-dark"
+              >
+                <Bell className="h-4 w-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
 
-            {/* Notifications Dropdown */}
-            {showNotifications && (
-              <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl z-50">
-                {/* Header */}
-                <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-3">
-                  <h3 className="font-display font-bold text-brand-primary">
-                    Notifications
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    {unreadCount > 0 && (
-                      <button
-                        onClick={markAllNotificationsAsRead}
-                        className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-brand-cyan-dark hover:bg-brand-cyan-dark/10 transition-colors"
-                        title="Mark all as read"
-                      >
-                        <CheckCheck className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Mark all</span>
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setShowNotifications(false)}
-                      className="rounded-lg p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Notifications List */}
-                <div className="max-h-[400px] overflow-y-auto">
-                  {isLoadingNotifications ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-brand-primary" />
-                    </div>
-                  ) : notifications.length === 0 ? (
-                    <div className="py-8 text-center">
-                      <Bell className="mx-auto h-8 w-8 text-gray-300" />
-                      <p className="mt-2 text-sm text-gray-500">
-                        No notifications
-                      </p>
-                    </div>
-                  ) : (
-                    notifications.map((notification) => {
-                      const { icon: Icon, bgColor, iconColor } = getNotificationIcon(notification.type);
-                      return (
+              {/* Notifications Dropdown */}
+              {showNotifications && (
+                <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl z-50">
+                  {/* Header */}
+                  <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-3">
+                    <h3 className="font-display font-bold text-brand-primary">
+                      Notifications
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      {unreadCount > 0 && (
                         <button
-                          key={notification.id}
-                          onClick={() => handleNotificationClick(notification)}
-                          className={`flex w-full gap-3 border-b border-gray-50 p-4 text-left transition-colors hover:bg-gray-50 ${
-                            !notification.isRead ? "bg-blue-50/50" : ""
-                          }`}
+                          onClick={markAllNotificationsAsRead}
+                          className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-brand-cyan-dark hover:bg-brand-cyan-dark/10 transition-colors"
+                          title="Mark all as read"
                         >
-                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${bgColor}`}>
-                            <Icon className={`h-5 w-5 ${iconColor}`} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <p className={`text-sm ${!notification.isRead ? "font-bold" : "font-medium"} text-gray-900`}>
-                                {notification.title}
-                              </p>
-                              {!notification.isRead && (
-                                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
-                              )}
-                            </div>
-                            <p className="mt-1 text-xs text-gray-500 line-clamp-2">
-                              {notification.message}
-                            </p>
-                            <p className="mt-1 text-[10px] text-gray-400">
-                              {formatDistanceToNow(new Date(notification.createdAt), {
-                                addSuffix: true,
-                                locale: enUS,
-                              })}
-                            </p>
-                          </div>
+                          <CheckCheck className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Mark all</span>
                         </button>
-                      );
-                    })
+                      )}
+                      <button
+                        onClick={() => setShowNotifications(false)}
+                        className="rounded-lg p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Notifications List */}
+                  <div className="max-h-[400px] overflow-y-auto">
+                    {isLoadingNotifications ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-brand-primary" />
+                      </div>
+                    ) : notifications.length === 0 ? (
+                      <div className="py-8 text-center">
+                        <Bell className="mx-auto h-8 w-8 text-gray-300" />
+                        <p className="mt-2 text-sm text-gray-500">
+                          No notifications
+                        </p>
+                      </div>
+                    ) : (
+                      notifications.map((notification) => {
+                        const { icon: Icon, bgColor, iconColor } = getNotificationIcon(notification.type);
+                        return (
+                          <button
+                            key={notification.id}
+                            onClick={() => handleNotificationClick(notification)}
+                            className={`flex w-full gap-3 border-b border-gray-50 p-4 text-left transition-colors hover:bg-gray-50 ${
+                              !notification.isRead ? "bg-blue-50/50" : ""
+                            }`}
+                          >
+                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${bgColor}`}>
+                              <Icon className={`h-5 w-5 ${iconColor}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <p className={`text-sm ${!notification.isRead ? "font-bold" : "font-medium"} text-gray-900`}>
+                                  {notification.title}
+                                </p>
+                                {!notification.isRead && (
+                                  <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+                                )}
+                              </div>
+                              <p className="mt-1 text-xs text-gray-500 line-clamp-2">
+                                {notification.message}
+                              </p>
+                              <p className="mt-1 text-[10px] text-gray-400">
+                                {formatDistanceToNow(new Date(notification.createdAt), {
+                                  addSuffix: true,
+                                  locale: enUS,
+                                })}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Footer */}
+                  {notifications.length > 0 && (
+                    <div className="border-t border-gray-100 bg-gray-50 p-2">
+                      <button
+                        onClick={() => {
+                          setShowNotifications(false);
+                          router.push("/dashboard");
+                        }}
+                        className="w-full rounded-lg py-2 text-center text-sm font-medium text-brand-primary hover:bg-gray-100"
+                      >
+                        View all in Dashboard
+                      </button>
+                    </div>
                   )}
                 </div>
-
-                {/* Footer */}
-                {notifications.length > 0 && (
-                  <div className="border-t border-gray-100 bg-gray-50 p-2">
-                    <button
-                      onClick={() => {
-                        setShowNotifications(false);
-                        router.push("/dashboard");
-                      }}
-                      className="w-full rounded-lg py-2 text-center text-sm font-medium text-brand-primary hover:bg-gray-100"
-                    >
-                      View all in Dashboard
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Divider - Hidden on mobile */}
           <div className="hidden h-8 w-px bg-gray-200 sm:block" />
