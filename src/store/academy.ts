@@ -388,7 +388,7 @@ export const useAcademyStore = create<AcademyStore>((set, get) => ({
       await api.post<ApiResponse<LessonResource>>(
         `/api/admin/academy/lessons/${lessonId}/resources/upload`,
         formData,
-        { headers: { "Content-Type": "multipart/form-data" } },
+        { headers: { "Content-Type": undefined } },
       );
       
       const { selectedModule } = get();

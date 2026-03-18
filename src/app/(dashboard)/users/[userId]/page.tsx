@@ -558,27 +558,56 @@ export default function UserDetailPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Course Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Module</th>
                     <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Progress</th>
-                    <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Completed</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {user.academyProgress.map((progress) => (
-                    <tr key={progress.courseId}>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                        {progress.courseName}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                        <div className="w-full max-w-[100px] h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-brand-cyan-dark" style={{ width: `${progress.progress}%` }} />
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                        {progress.completedLessons} / {progress.totalLessons}
-                      </td>
-                    </tr>
-                  ))}
+                  {user.academyProgress.map((progress) => {
+                    const status = progress.progress === 100
+                      ? "Completed"
+                      : progress.progress > 0
+                        ? "In Progress"
+                        : "Not Started";
+                    return (
+                      <tr key={progress.courseId}>
+                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                          {progress.courseName}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          <div className="flex items-center gap-3">
+                            <div className="w-full max-w-[120px] h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${
+                                  progress.progress === 100
+                                    ? "bg-green-500"
+                                    : progress.progress > 0
+                                      ? "bg-brand-primary"
+                                      : "bg-gray-200"
+                                }`}
+                                style={{ width: `${progress.progress}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-semibold text-gray-600 min-w-[40px]">
+                              {progress.progress}%
+                            </span>
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap px-6 py-4">
+                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            status === "Completed"
+                              ? "bg-green-100 text-green-800"
+                              : status === "In Progress"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-gray-100 text-gray-500"
+                          }`}>
+                            {status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             ) : (

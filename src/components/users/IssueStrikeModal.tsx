@@ -19,6 +19,7 @@ export function IssueStrikeModal({ isOpen, onClose, userId, userName }: IssueStr
   useModalLock(isOpen, onClose);
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { issueStrike } = useUsersStore();
   const { config, fetchConfig } = useSystemConfigStore();
 
@@ -27,19 +28,40 @@ export function IssueStrikeModal({ isOpen, onClose, userId, userName }: IssueStr
     if (!config) fetchConfig();
   }, [config, fetchConfig]);
 
+  // Clear error and reason when modal opens (adjusting state during rendering)
+  const [prevIsOpen, setPrevIsOpen] = useState(false);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (isOpen) {
+      setError(null);
+      setReason("");
+    }
+  }
+
   const maxStrikes = config?.maxStrikesForPunishment ?? 3;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reason.trim()) return;
+    setError(null);
+
+    const trimmed = reason.trim();
+    if (!trimmed) return;
+
+    if (trimmed.length < 5) {
+      setError("The reason must be at least 5 characters long.");
+      return;
+    }
 
     setIsSubmitting(true);
-    const result = await issueStrike(userId, { reason: reason.trim() });
+    const result = await issueStrike(userId, { reason: trimmed });
     setIsSubmitting(false);
 
     if (result.success) {
       setReason("");
+      setError(null);
       onClose();
+    } else {
+      setError(result.message || "An error occurred while issuing the strike.");
     }
   };
 
@@ -99,10 +121,22 @@ export function IssueStrikeModal({ isOpen, onClose, userId, userName }: IssueStr
                   rows={3}
                   placeholder="Explain the reason for this strike..."
                   value={reason}
-                  onChange={(e) => setReason(e.target.value)}
+                  onChange={(e) => {
+                    setReason(e.target.value);
+                    if (error) setError(null);
+                  }}
                   className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-red-500 focus:ring-2 focus:ring-red-500/20 resize-none"
                 />
+                <p className="mt-1 text-xs text-gray-400">
+                  Minimum 5 characters ({reason.trim().length}/5)
+                </p>
               </div>
+
+              {error && (
+                <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600">
+                  {error}
+                </div>
+              )}
 
               <div className="flex justify-end gap-3 pt-2">
                 <button

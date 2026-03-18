@@ -151,7 +151,7 @@ export interface Strike {
 }
 
 export interface UserEnrollment {
-  id: number;
+  id: string;
   attendanceStatus: AttendanceStatus | null;
   attendanceMarkedAt: string | null;
   classSession: {

@@ -37,7 +37,6 @@ export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
     title: "",
     company: "",
     location: "",
-    salaryRange: "",
     oteMin: "",
     oteMax: "",
     revenue: "",
@@ -57,7 +56,6 @@ export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
         title: job.title || "",
         company: job.company || "",
         location: job.location || "",
-        salaryRange: job.salaryRange || "",
         oteMin: job.oteMin ? String(job.oteMin) : "",
         oteMax: job.oteMax ? String(job.oteMax) : "",
         revenue: job.revenue ? String(job.revenue) : "",
@@ -121,7 +119,7 @@ export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
       title: formData.title.trim(),
       company: formData.company.trim(),
       location: formData.location.trim(),
-      salaryRange: formData.salaryRange.trim() || undefined,
+
       oteMin: formData.oteMin ? parseInt(formData.oteMin) : undefined,
       oteMax: formData.oteMax ? parseInt(formData.oteMax) : undefined,
       revenue: formData.revenue ? parseInt(formData.revenue) : undefined,
@@ -237,36 +235,22 @@ export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
                 </div>
               </div>
 
-              {/* Job Type & Salary */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      Job Type
-                  </label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) => handleInputChange("type", e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition-colors focus:border-brand-primary"
-                  >
-                    {JOB_TYPES.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      Salary Range
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.salaryRange}
-                    onChange={(e) => handleInputChange("salaryRange", e.target.value)}
-                    placeholder="e.g. $45,000 - $60,000/year"
-                    className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition-colors focus:border-brand-primary"
-                  />
-                </div>
+              {/* Job Type */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Job Type
+                </label>
+                <select
+                  value={formData.type}
+                  onChange={(e) => handleInputChange("type", e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition-colors focus:border-brand-primary"
+                >
+                  {JOB_TYPES.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* OTE & Revenue */}
