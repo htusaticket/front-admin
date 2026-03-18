@@ -18,6 +18,34 @@ import { useState, useEffect } from "react";
 
 import { useAcademyStore, type Lesson } from "@/store/academy";
 
+/**
+ * Converts a regular YouTube/Vimeo URL to an embeddable URL for iframes.
+ */
+function convertToEmbedUrl(url: string): string | null {
+  const trimmed = url.trim();
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+  } catch {
+    return null;
+  }
+
+  const ytWatch = trimmed.match(/(?:youtube\.com\/watch\?v=|youtube\.com\/watch\?.*&v=)([^&]+)/);
+  if (ytWatch?.[1]) return `https://www.youtube.com/embed/${ytWatch[1]}`;
+
+  const ytShort = trimmed.match(/youtu\.be\/([^?&]+)/);
+  if (ytShort?.[1]) return `https://www.youtube.com/embed/${ytShort[1]}`;
+
+  if (trimmed.includes("youtube.com/embed/")) return trimmed;
+
+  const vimeoMatch = trimmed.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch?.[1]) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+
+  if (trimmed.includes("player.vimeo.com/video/")) return trimmed;
+
+  return trimmed;
+}
+
 export default function ModulePreviewPage() {
   const params = useParams();
   const router = useRouter();
@@ -161,41 +189,58 @@ export default function ModulePreviewPage() {
           {selectedLesson ? (
             <>
               {/* Video Player */}
-              {selectedLesson.contentUrl && (
-                <motion.div
-                  key={selectedLesson.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
-                >
-                  <div className="aspect-video w-full bg-black">
-                    <iframe
-                      src={selectedLesson.contentUrl}
-                      className="h-full w-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-                  <div className="p-6">
-                    <h1 className="font-display text-2xl font-bold text-brand-primary">
-                      {selectedLesson.title}
-                    </h1>
-                    <p className="mt-1 text-sm text-gray-600">
-                      {selectedModule.title} • {selectedLesson.duration}
-                    </p>
-                    {selectedLesson.description && (
-                      <div className="mt-4">
-                        <h2 className="font-display text-lg font-bold text-brand-primary">
-                          Descripción
-                        </h2>
-                        <p className="mt-2 text-gray-700 leading-relaxed">
-                          {selectedLesson.description}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              )}
+              {selectedLesson.contentUrl && (() => {
+                const embedUrl = convertToEmbedUrl(selectedLesson.contentUrl);
+                if (!embedUrl) {
+                  return (
+                    <motion.div
+                      key={selectedLesson.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center"
+                    >
+                      <p className="text-sm text-red-600 font-medium">
+                        ⚠️ La URL del video no es válida.
+                      </p>
+                    </motion.div>
+                  );
+                }
+                return (
+                  <motion.div
+                    key={selectedLesson.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+                  >
+                    <div className="aspect-video w-full bg-black">
+                      <iframe
+                        src={embedUrl}
+                        className="h-full w-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                    <div className="p-6">
+                      <h1 className="font-display text-2xl font-bold text-brand-primary">
+                        {selectedLesson.title}
+                      </h1>
+                      <p className="mt-1 text-sm text-gray-600">
+                        {selectedModule.title} • {selectedLesson.duration}
+                      </p>
+                      {selectedLesson.description && (
+                        <div className="mt-4">
+                          <h2 className="font-display text-lg font-bold text-brand-primary">
+                            Descripción
+                          </h2>
+                          <p className="mt-2 text-gray-700 leading-relaxed">
+                            {selectedLesson.description}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })()}
 
               {/* Lesson info if no video */}
               {!selectedLesson.contentUrl && (

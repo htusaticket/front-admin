@@ -5,7 +5,7 @@ export type UserPlan = "PRO" | "ELITE" | "LEVEL_UP" | "HIRING_HUB" | "SKILL_BUIL
 export type SubscriptionStatus = "ACTIVE" | "EXPIRED" | "CANCELLED";
 export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 export type SubmissionStatus = "PENDING" | "APPROVED" | "NEEDS_IMPROVEMENT";
-export type ChallengeType = "AUDIO" | "QUIZ";
+export type ChallengeType = "AUDIO" | "MULTIPLE_CHOICE" | "WRITING";
 
 // ==================== API RESPONSE ====================
 export interface ApiResponse<T> {
@@ -109,6 +109,17 @@ export interface AdminUserDetail extends AdminUser {
   enrollments: UserEnrollment[];
   academyProgress: AcademyProgress[];
   subscription: Subscription | null;
+  stats?: UserStats;
+}
+
+export interface UserStats {
+  attendancePercentage: number;
+  totalClassesEnrolled: number;
+  totalClassesAttended: number;
+  modulesCompleted: number;
+  totalModules: number;
+  challengesCompleted: number;
+  jobApplicationsCount: number;
 }
 
 export interface UserStrikesInfo {
@@ -252,6 +263,7 @@ export interface AdminClass {
   capacityMax: number | null;
   enrolledCount: number;
   meetLink: string | null;
+  materialsLink: string | null;
   description: string | null;
   createdAt: string;
 }
@@ -285,6 +297,7 @@ export interface CreateClassPayload {
   meetLink?: string;
   capacityMax?: number;
   description?: string;
+  materialsLink?: string;
 }
 
 // Save attendance payload

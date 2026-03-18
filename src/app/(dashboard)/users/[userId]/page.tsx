@@ -22,6 +22,7 @@ import {
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 import { Pagination } from "@/components/ui/Pagination";
 import { ActivateUserModal } from "@/components/users/ActivateUserModal";
@@ -56,6 +57,15 @@ const formatDate = (dateStr: string | null): string => {
   if (!dateStr) return "-";
   const date = new Date(dateStr);
   return date.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+};
+
+const REFERENCE_LABELS: Record<string, string> = {
+  instagram: "Instagram",
+  facebook: "Facebook",
+  linkedin: "LinkedIn",
+  youtube: "YouTube",
+  friend: "Recomendación de amigo",
+  other: "Otro",
 };
 
 const getAttendanceBadge = (status: AttendanceStatus | null) => {
@@ -115,20 +125,67 @@ export default function UserDetailPage() {
     return () => clearSelectedUser();
   }, [userId, fetchUserDetails, clearSelectedUser]);
 
-  // Initialize notesValue when user changes (using functional update to avoid lint warning)
+  // Initialize notesValue when user changes - parse per-admin notes
   const adminNotes = user?.adminNotes;
+  const currentAdminId = currentUser?.id;
+  
+  // Helper to extract current admin's note from JSON or plain text
+  const getMyNote = (rawNotes: string | null | undefined): string => {
+    if (!rawNotes) return "";
+    try {
+      const parsed = JSON.parse(rawNotes);
+      if (typeof parsed === "object" && currentAdminId && parsed[currentAdminId]) {
+        return parsed[currentAdminId].note || "";
+      }
+      // If no entry for current admin, return empty
+      return "";
+    } catch {
+      // Legacy plain text format - show to all admins
+      return rawNotes;
+    }
+  };
+
+  // Helper to get all admin notes for display (SUPERADMIN can see all)
+  const getAllNotes = (
+    rawNotes: string | null | undefined,
+  ): { adminId: string; note: string; updatedAt: string; adminName: string }[] => {
+    if (!rawNotes) return [];
+    try {
+      const parsed = JSON.parse(rawNotes);
+      if (typeof parsed === "object") {
+        return Object.entries(parsed)
+          .filter(([, val]) => typeof val === "object" && (val as { note: string }).note)
+          .map(([key, val]) => ({
+            adminId: key,
+            note: (val as { note: string }).note,
+            updatedAt: (val as { updatedAt?: string }).updatedAt || "",
+            adminName: (val as { adminName?: string }).adminName || "",
+          }));
+      }
+      return [];
+    } catch {
+      return [{ adminId: "legacy", note: rawNotes, updatedAt: "", adminName: "System" }];
+    }
+  };
+
   useEffect(() => {
     if (adminNotes) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setNotesValue(prevNotes => adminNotes !== prevNotes ? adminNotes : prevNotes);
+      const myNote = getMyNote(adminNotes);
+      setNotesValue(prevNotes => myNote !== prevNotes ? myNote : prevNotes);
     }
-  }, [adminNotes]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminNotes, currentAdminId]);
 
   const handleSaveNotes = async () => {
     if (!userId) return;
     setIsSavingNotes(true);
-    await updateUserNotes(userId, { notes: notesValue });
+    const result = await updateUserNotes(userId, { notes: notesValue });
     setIsSavingNotes(false);
+    if (result.success) {
+      toast.success("Notes saved successfully");
+    } else {
+      toast.error(result.message || "Error saving notes");
+    }
   };
 
   const handleSuspendUser = async () => {
@@ -161,16 +218,18 @@ export default function UserDetailPage() {
   const stats = user ? [
     { 
       label: "Classes Attended", 
-      value: enrollments.filter(e => e.attendanceStatus === "PRESENT").length.toString(), 
+      value: (user.stats?.totalClassesAttended ?? enrollments.filter(e => e.attendanceStatus === "PRESENT").length).toString(), 
       icon: CheckCircle, 
       color: "text-green-600", 
       bg: "bg-green-100", 
     },
     { 
       label: "Avg. Attendance", 
-      value: enrollments.length > 0 
-        ? `${Math.round((enrollments.filter(e => e.attendanceStatus === "PRESENT").length / enrollments.length) * 100)}%`
-        : "0%", 
+      value: user.stats?.attendancePercentage != null
+        ? `${user.stats.attendancePercentage}%`
+        : enrollments.length > 0 
+          ? `${Math.round((enrollments.filter(e => e.attendanceStatus === "PRESENT").length / enrollments.length) * 100)}%`
+          : "0%", 
       icon: Clock, 
       color: "text-blue-600", 
       bg: "bg-blue-100", 
@@ -183,8 +242,8 @@ export default function UserDetailPage() {
       bg: "bg-amber-100", 
     },
     { 
-      label: "Academy Progress", 
-      value: user.academyProgress?.length.toString() || "0", 
+      label: "Jobs Applied", 
+      value: (user.stats?.jobApplicationsCount ?? 0).toString(), 
       icon: GraduationCap, 
       color: "text-purple-600", 
       bg: "bg-purple-100", 
@@ -443,7 +502,7 @@ export default function UserDetailPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Reference</span>
-                  <span className="font-medium text-gray-900">{user.reference || "-"}</span>
+                  <span className="font-medium text-gray-900">{user.reference ? (REFERENCE_LABELS[user.reference] || user.reference) : "-"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Member Since</span>
@@ -453,10 +512,10 @@ export default function UserDetailPage() {
             </div>
             
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-4 font-display text-lg font-bold text-gray-900">Admin Notes</h3>
+              <h3 className="mb-4 font-display text-lg font-bold text-gray-900">My Notes</h3>
               <textarea 
                 className="w-full h-32 rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-brand-primary resize-none"
-                placeholder="Add notes about this user..."
+                placeholder="Add your personal notes about this user..."
                 value={notesValue}
                 onChange={(e) => setNotesValue(e.target.value)}
               />
@@ -468,6 +527,26 @@ export default function UserDetailPage() {
                 {isSavingNotes ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 Save Notes
               </button>
+
+              {/* Show all admin notes for SUPERADMIN */}
+              {isSuperAdmin && getAllNotes(user.adminNotes).filter(n => n.adminId !== currentAdminId).length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <h4 className="text-sm font-bold text-gray-500 mb-3">Notes from other admins</h4>
+                  <div className="space-y-3">
+                    {getAllNotes(user.adminNotes)
+                      .filter(n => n.adminId !== currentAdminId)
+                      .map((n) => (
+                        <div key={n.adminId} className="rounded-lg bg-gray-50 p-3 border border-gray-100">
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{n.note}</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {n.adminName || (n.adminId === "legacy" ? "System" : "Admin")}
+                            {n.updatedAt && ` • ${formatDate(n.updatedAt)}`}
+                          </p>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         )}

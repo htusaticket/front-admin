@@ -272,7 +272,7 @@ export default function ProfilePage() {
                   {!isEditing ? (
                     <button
                       onClick={() => setIsEditing(true)}
-                      className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50"
+                      className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-300 rounded-lg text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
                     >
                       <Edit2 className="h-4 w-4" />
                       Editar
@@ -282,7 +282,7 @@ export default function ProfilePage() {
                       <button
                         onClick={handleCancelEdit}
                         disabled={saving}
-                        className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                        className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-300 rounded-lg text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 transition-colors"
                       >
                         <X className="h-4 w-4" />
                         Cancelar

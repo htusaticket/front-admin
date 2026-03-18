@@ -29,9 +29,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${comfortaa.variable} antialiased`}
+        suppressHydrationWarning
       >
         {children}
         <Toaster position="top-right" richColors />

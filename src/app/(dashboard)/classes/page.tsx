@@ -18,8 +18,9 @@ import { toast } from "sonner";
 
 import { AddClassModal } from "@/components/classes/AddClassModal";
 import { AttendanceModal } from "@/components/classes/AttendanceModal";
+import { useModalLock } from "@/hooks/useModalLock";
 import { useClassesStore } from "@/store/classes";
-import type { AdminClass } from "@/types/admin";
+import type { AdminClass, CreateClassPayload } from "@/types/admin";
 
 const formatDateTime = (dateStr: string): { date: string; time: string; day: string } => {
   const date = new Date(dateStr);
@@ -68,10 +69,13 @@ export default function ClassesPage() {
   const [isAddClassOpen, setIsAddClassOpen] = useState(false);
   const [attendanceClass, setAttendanceClass] = useState<{ id: number; title: string; date: string } | null>(null);
   const [editingClass, setEditingClass] = useState<AdminClass | null>(null);
-  const [editForm, setEditForm] = useState({ title: "", meetLink: "", startTime: "", endTime: "", date: "" });
+  const [editForm, setEditForm] = useState({ title: "", meetLink: "", startTime: "", endTime: "", date: "", type: "REGULAR" as AdminClass["type"], capacityMax: "" as string, description: "", materialsLink: "" });
   const [recordingLinkClass, setRecordingLinkClass] = useState<number | null>(null);
   const [recordingLink, setRecordingLink] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  // Lock body scroll and escape for edit class modal
+  useModalLock(!!editingClass, () => setEditingClass(null));
 
   useEffect(() => {
     fetchClasses({ limit: 50 });
@@ -96,6 +100,10 @@ export default function ClassesPage() {
       date: `${startDate.getUTCFullYear()}-${(startDate.getUTCMonth()+1).toString().padStart(2, "0")}-${startDate.getUTCDate().toString().padStart(2, "0")}`,
       startTime: `${startDate.getUTCHours().toString().padStart(2, "0")}:${startDate.getUTCMinutes().toString().padStart(2, "0")}`,
       endTime: `${endDate.getUTCHours().toString().padStart(2, "0")}:${endDate.getUTCMinutes().toString().padStart(2, "0")}`,
+      type: session.type || "REGULAR",
+      capacityMax: session.capacityMax != null ? String(session.capacityMax) : "",
+      description: session.description && !session.description.startsWith("[RECORDING]") ? session.description : "",
+      materialsLink: session.materialsLink || "",
     });
   };
 
@@ -107,7 +115,11 @@ export default function ClassesPage() {
       meetLink: editForm.meetLink || undefined,
       startTime: `${editForm.date}T${editForm.startTime}:00.000Z`,
       endTime: `${editForm.date}T${editForm.endTime}:00.000Z`,
-    });
+      type: editForm.type,
+      capacityMax: editForm.capacityMax ? parseInt(editForm.capacityMax) : undefined,
+      description: editForm.description || undefined,
+      materialsLink: editForm.materialsLink || undefined,
+    } as Partial<CreateClassPayload>);
     setIsSaving(false);
     if (result.success) {
       toast.success("Class updated successfully");
@@ -265,7 +277,7 @@ export default function ClassesPage() {
                         onClick={() => handleAttendanceClick(session)}
                         className="w-full rounded-xl bg-gray-900 py-2.5 text-sm font-bold text-white transition-all hover:bg-gray-800"
                       >
-                        Take Attendance
+                        {isPast ? "View Attendance" : "Take Attendance"}
                       </button>
                     ) : (
                       <div className="w-full rounded-xl bg-gray-100 py-2.5 text-sm font-bold text-gray-400 text-center cursor-not-allowed">
@@ -293,11 +305,22 @@ export default function ClassesPage() {
                         </div>
                       ) : (
                         <button
-                          onClick={() => setRecordingLinkClass(session.id)}
-                          className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 py-2.5 text-sm font-bold text-gray-500 transition-all hover:border-brand-primary hover:text-brand-primary"
+                          onClick={() => {
+                            setRecordingLinkClass(session.id);
+                            // Pre-fill with existing recording URL if available
+                            const existingRecording = session.description?.startsWith("[RECORDING]")
+                              ? session.description.replace("[RECORDING]", "")
+                              : "";
+                            setRecordingLink(existingRecording);
+                          }}
+                          className={`w-full flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-bold transition-all ${
+                            session.description?.startsWith("[RECORDING]")
+                              ? "border-green-200 bg-green-50 text-green-600 hover:border-green-400"
+                              : "border-dashed border-gray-300 bg-gray-50 text-gray-500 hover:border-brand-primary hover:text-brand-primary"
+                          }`}
                         >
                           <LinkIcon className="h-4 w-4" />
-                          Add Recording Link
+                          {session.description?.startsWith("[RECORDING]") ? "Edit Recording Link" : "Add Recording Link"}
                         </button>
                       )
                     )}
@@ -341,60 +364,83 @@ export default function ClassesPage() {
 
       {/* Edit Class Modal */}
       {editingClass && (
-        <>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setEditingClass(null)}
+        >
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setEditingClass(null)}
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-          />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl"
-            >
-              <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-                <h2 className="font-display text-lg font-bold text-gray-900">Edit Class</h2>
-                <button onClick={() => setEditingClass(null)} className="rounded-full p-2 text-gray-500 hover:bg-gray-100">
-                  <X className="h-5 w-5" />
-                </button>
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 shrink-0">
+              <h2 className="font-display text-lg font-bold text-gray-900">Edit Class</h2>
+              <button onClick={() => setEditingClass(null)} className="rounded-full p-2 text-gray-500 hover:bg-gray-100">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-gray-700">Title</label>
+                <input type="text" value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
               </div>
-              <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">Title</label>
-                  <input type="text" value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
+                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">Type</label>
+                  <select value={editForm.type} onChange={(e) => setEditForm({ ...editForm, type: e.target.value as AdminClass["type"] })} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary">
+                    <option value="REGULAR">Class</option>
+                    <option value="WORKSHOP">Workshop</option>
+                    <option value="WEBINAR">Webinar</option>
+                    <option value="QA">Q&A</option>
+                    <option value="MASTERCLASS">Masterclass</option>
+                  </select>
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">Date</label>
-                  <input type="date" value={editForm.date} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-gray-700">Start Time</label>
-                    <input type="time" value={editForm.startTime} onChange={(e) => setEditForm({ ...editForm, startTime: e.target.value })} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-gray-700">End Time</label>
-                    <input type="time" value={editForm.endTime} onChange={(e) => setEditForm({ ...editForm, endTime: e.target.value })} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">Meet Link</label>
-                  <input type="url" value={editForm.meetLink} onChange={(e) => setEditForm({ ...editForm, meetLink: e.target.value })} placeholder="https://meet.google.com/..." className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
+                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">Max Capacity</label>
+                  <input type="number" min="0" placeholder="Unlimited" value={editForm.capacityMax} onChange={(e) => setEditForm({ ...editForm, capacityMax: e.target.value })} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
                 </div>
               </div>
-              <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
-                <button onClick={() => setEditingClass(null)} className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button onClick={handleEditSave} disabled={isSaving} className="flex items-center gap-2 rounded-xl bg-brand-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-brand-primary/90 disabled:opacity-50">
-                  {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-gray-700">Date</label>
+                <input type="date" value={editForm.date} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">Start Time</label>
+                  <input type="time" value={editForm.startTime} onChange={(e) => setEditForm({ ...editForm, startTime: e.target.value })} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">End Time</label>
+                  <input type="time" value={editForm.endTime} onChange={(e) => setEditForm({ ...editForm, endTime: e.target.value })} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-gray-700">Meet Link</label>
+                <input type="url" value={editForm.meetLink} onChange={(e) => setEditForm({ ...editForm, meetLink: e.target.value })} placeholder="https://meet.google.com/..." className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-gray-700">Materials Link</label>
+                <input type="url" value={editForm.materialsLink} onChange={(e) => setEditForm({ ...editForm, materialsLink: e.target.value })} placeholder="https://drive.google.com/..." className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
+                <p className="mt-1 text-xs text-gray-400">Link to class materials (visible to students)</p>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-gray-700">Description</label>
+                <textarea rows={3} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} placeholder="Optional class description..." className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary resize-none" />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4 shrink-0">
+              <button onClick={() => setEditingClass(null)} className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button onClick={handleEditSave} disabled={isSaving} className="flex items-center gap-2 rounded-xl bg-brand-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-brand-primary/90 disabled:opacity-50">
+                {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                   Save Changes
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        </>
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
       )}
     </div>
   );

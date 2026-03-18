@@ -208,7 +208,13 @@ export const useChallengesStore = create<ChallengesStore>((set, get) => ({
         instructions: data.description, // Backend uses 'instructions' instead of 'description'
         type: data.type,
         date: data.scheduledDate, // Backend uses 'date' instead of 'scheduledDate'
-        questions: data.quizQuestions, // Backend uses 'questions' instead of 'quizQuestions'
+        questions: data.quizQuestions?.map(q => ({
+          text: q.question,
+          options: q.options,
+          correctAnswer: typeof q.correctAnswer === "string"
+            ? q.options.indexOf(q.correctAnswer)
+            : q.correctAnswer,
+        })),
         audioUrl: data.audioUrl,
         points: data.points,
         visibleForSkillBuilder: data.visibleForSkillBuilder,
@@ -242,7 +248,13 @@ export const useChallengesStore = create<ChallengesStore>((set, get) => ({
       if (data.title !== undefined) backendData.title = data.title;
       if (data.description !== undefined) backendData.instructions = data.description;
       if (data.scheduledDate !== undefined) backendData.date = data.scheduledDate;
-      if (data.quizQuestions !== undefined) backendData.questions = data.quizQuestions;
+      if (data.quizQuestions !== undefined) backendData.questions = data.quizQuestions?.map(q => ({
+        text: q.question,
+        options: q.options,
+        correctAnswer: typeof q.correctAnswer === "string"
+          ? q.options.indexOf(q.correctAnswer)
+          : q.correctAnswer,
+      }));
       if (data.audioUrl !== undefined) backendData.audioUrl = data.audioUrl;
       if (data.points !== undefined) backendData.points = data.points;
       if (data.visibleForSkillBuilder !== undefined) backendData.visibleForSkillBuilder = data.visibleForSkillBuilder;

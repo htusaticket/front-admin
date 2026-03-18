@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
+import { useModalLock } from "@/hooks/useModalLock";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 import { useSubscriptionsStore, type CreateSubscriptionDto, type UpdateSubscriptionDto } from "@/store/subscriptions";
@@ -85,6 +86,19 @@ export default function SubscriptionsPage() {
     setFilters,
   } = useSubscriptionsStore();
 
+  // Parse date as local timezone (avoids UTC midnight shifting back a day)
+  const parseLocalDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  };
+
+  // Helper to detect far-future "infinite" dates
+  const isInfiniteDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return true;
+    const year = new Date(dateStr).getUTCFullYear();
+    return year >= 2090;
+  };
+
   // Local state
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -98,6 +112,16 @@ export default function SubscriptionsPage() {
   // Users for select dropdown
   const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+  const [editStatus, setEditStatus] = useState<SubscriptionStatus>("ACTIVE");
+
+  // Lock body scroll and escape for modals
+  useModalLock(showCreateModal, () => setShowCreateModal(false));
+  useModalLock(showEditModal, () => { setShowEditModal(false); setSelectedSubscription(null); });
+  useModalLock(showDeleteModal, () => { setShowDeleteModal(false); setSelectedSubscription(null); });
+  useModalLock(showCancelModal, () => { setShowCancelModal(false); setSelectedSubscription(null); });
 
   // Form state for create/edit
   const [formData, setFormData] = useState<CreateSubscriptionDto>({
@@ -150,9 +174,25 @@ export default function SubscriptionsPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Close user dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
+        setShowUserDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Handle create subscription
   const handleCreate = async () => {
-    const success = await createSubscription(formData);
+    // Backend requires endDate as valid ISO date string, use far-future date for "Infinite"
+    const createData = {
+      ...formData,
+      endDate: formData.endDate || "2099-12-31",
+    };
+    const success = await createSubscription(createData);
     if (success) {
       setShowCreateModal(false);
       resetForm();
@@ -165,13 +205,19 @@ export default function SubscriptionsPage() {
     
     const updateData: UpdateSubscriptionDto = {
       plan: formData.plan,
-      startDate: formData.startDate,
-      endDate: formData.endDate,
+      status: editStatus,
+      startDate: formData.startDate || undefined,
+      endDate: formData.endDate || "2099-12-31",
       hasPaid: formData.hasPaid,
-      paymentNote: formData.paymentNote,
+      paymentNote: formData.paymentNote || undefined,
     };
+
+    // Remove undefined values to avoid sending empty strings
+    const cleanData = Object.fromEntries(
+      Object.entries(updateData).filter(([, v]) => v !== undefined),
+    ) as UpdateSubscriptionDto;
     
-    const success = await updateSubscription(selectedSubscription.id, updateData);
+    const success = await updateSubscription(selectedSubscription.id, cleanData);
     if (success) {
       setShowEditModal(false);
       setSelectedSubscription(null);
@@ -209,16 +255,19 @@ export default function SubscriptionsPage() {
       hasPaid: false,
       paymentNote: "",
     });
+    setUserSearchQuery("");
+    setEditStatus("ACTIVE");
   };
 
   // Open edit modal
   const openEditModal = (subscription: Subscription) => {
     setSelectedSubscription(subscription);
+    setEditStatus(subscription.status);
     setFormData({
       userId: subscription.userId,
       plan: subscription.plan,
-      startDate: format(new Date(subscription.startDate), "yyyy-MM-dd"),
-      endDate: format(new Date(subscription.endDate), "yyyy-MM-dd"),
+      startDate: format(parseLocalDate(subscription.startDate), "yyyy-MM-dd"),
+      endDate: subscription.endDate && !isInfiniteDate(subscription.endDate) ? format(parseLocalDate(subscription.endDate), "yyyy-MM-dd") : "",
       hasPaid: subscription.hasPaid,
       paymentNote: subscription.paymentNote || "",
     });
@@ -404,7 +453,7 @@ export default function SubscriptionsPage() {
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Calendar className="h-4 w-4" />
                         <span>
-                          {format(new Date(subscription.startDate), "MMM d")} - {format(new Date(subscription.endDate), "MMM d, yyyy")}
+                          {format(parseLocalDate(subscription.startDate), "MMM d")} - {isInfiniteDate(subscription.endDate) ? "∞ Infinite" : format(parseLocalDate(subscription.endDate!), "MMM d, yyyy")}
                         </span>
                       </div>
                     </td>
@@ -531,18 +580,52 @@ export default function SubscriptionsPage() {
                       Loading users...
                     </div>
                   ) : (
-                    <select
-                      value={formData.userId}
-                      onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary bg-white"
-                    >
-                      <option value="">-- Select a user --</option>
-                      {allUsers.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.firstName} {u.lastName} ({u.email})
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative" ref={userDropdownRef}>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search by name or email..."
+                          value={userSearchQuery}
+                          onChange={(e) => {
+                            setUserSearchQuery(e.target.value);
+                            setShowUserDropdown(true);
+                            if (!e.target.value) setFormData({ ...formData, userId: "" });
+                          }}
+                          onFocus={() => setShowUserDropdown(true)}
+                          className="w-full rounded-xl border border-gray-200 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-brand-primary"
+                        />
+                      </div>
+                      {showUserDropdown && (
+                        <div className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+                          {allUsers
+                            .filter((u) => {
+                              const q = userSearchQuery.toLowerCase();
+                              return !q || `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(q);
+                            })
+                            .map((u) => (
+                              <button
+                                key={u.id}
+                                type="button"
+                                onClick={() => {
+                                  setFormData({ ...formData, userId: u.id });
+                                  setUserSearchQuery(`${u.firstName} ${u.lastName} (${u.email})`);
+                                  setShowUserDropdown(false);
+                                }}
+                                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-brand-primary/5 transition-colors ${formData.userId === u.id ? "bg-brand-primary/10 font-semibold" : ""}`}
+                              >
+                                <span className="font-medium text-gray-900">{u.firstName} {u.lastName}</span> <span className="text-gray-500">({u.email})</span>
+                              </button>
+                            ))}
+                          {allUsers.filter((u) => {
+                            const q = userSearchQuery.toLowerCase();
+                            return !q || `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(q);
+                          }).length === 0 && (
+                            <div className="px-4 py-3 text-sm text-gray-400 text-center">No users found</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -678,7 +761,31 @@ export default function SubscriptionsPage() {
                 <p className="text-sm text-gray-500">{selectedSubscription.user?.email}</p>
               </div>
 
+              {/* Reactivation banner for cancelled/expired subscriptions */}
+              {selectedSubscription.status !== "ACTIVE" && editStatus === "ACTIVE" && (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl">
+                  <p className="text-sm text-green-700 font-medium flex items-center gap-2">
+                    <Check className="h-4 w-4" />
+                    This subscription will be reactivated upon saving.
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-4">
+                {/* Status selector */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Status</label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as SubscriptionStatus)}
+                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary"
+                  >
+                    <option value="ACTIVE">Active</option>
+                    <option value="CANCELLED">Cancelled</option>
+                    <option value="EXPIRED">Expired</option>
+                  </select>
+                </div>
+
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Plan</label>
                   <select
