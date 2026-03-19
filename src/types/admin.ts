@@ -5,7 +5,7 @@ export type UserPlan = "PRO" | "ELITE" | "LEVEL_UP" | "HIRING_HUB" | "SKILL_BUIL
 export type SubscriptionStatus = "ACTIVE" | "EXPIRED" | "CANCELLED";
 export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 export type SubmissionStatus = "PENDING" | "APPROVED" | "NEEDS_IMPROVEMENT";
-export type ChallengeType = "AUDIO" | "MULTIPLE_CHOICE" | "WRITING";
+export type ChallengeType = "AUDIO" | "MULTIPLE_CHOICE";
 
 // ==================== API RESPONSE ====================
 export interface ApiResponse<T> {
