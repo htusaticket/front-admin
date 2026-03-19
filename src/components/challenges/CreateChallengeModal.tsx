@@ -82,6 +82,18 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate date is not in the past (parse as local date to avoid UTC issues)
+    const [y, m, d] = formData.date.split("-").map(Number);
+    const selectedDate = new Date(y, m - 1, d);
+    selectedDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (selectedDate < today) {
+      alert("No se pueden crear challenges para fechas pasadas");
+      return;
+    }
+
     if (formData.type === "MULTIPLE_CHOICE") {
       // Validate all questions
       for (let i = 0; i < formData.questions.length; i++) {
@@ -223,6 +235,7 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                   <input 
                     type="date" 
                     required
+                    min={new Date().toISOString().split("T")[0]}
                     className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-brand-primary"
                     value={formData.date}
                     onChange={e => setFormData({...formData, date: e.target.value})}

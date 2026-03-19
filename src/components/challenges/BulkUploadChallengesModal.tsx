@@ -37,9 +37,65 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
   const [_parsing, setParsing] = useState(false);
   const [visibleForSkillBuilder, setVisibleForSkillBuilder] = useState(false);
 
+  const REQUIRED_HEADERS = ["date", "title", "description", "type"];
+  const VALID_TYPES = ["Audio", "MultipleChoice", "AUDIO", "MULTIPLE_CHOICE"];
+  const MAX_CHALLENGES = 30;
+
+  const normalizeDate = (raw: string | number | undefined): string => {
+    if (raw === undefined || raw === null || raw === "") return "";
+    // Handle Excel serial date numbers (e.g. 46099)
+    if (typeof raw === "number" || (!isNaN(Number(raw)) && /^\d{4,5}(\.\d+)?$/.test(String(raw)))) {
+      const serial = typeof raw === "number" ? raw : Number(raw);
+      const excelEpoch = new Date(1899, 11, 30);
+      const d = new Date(excelEpoch.getTime() + serial * 86400000);
+      return d.toISOString().split("T")[0];
+    }
+    const str = String(raw).trim();
+    // Already YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    // DD-MM-YYYY or DD/MM/YYYY
+    const match = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+    if (match) {
+      const [, day, month, year] = match;
+      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+    // YYYY/MM/DD
+    const match2 = str.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+    if (match2) {
+      const [, year, month, day] = match2;
+      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+    return str;
+  };
+
+  const isValidDateFormat = (dateStr: string): boolean => {
+    return /^\d{4}-\d{2}-\d{2}$/.test(dateStr) && !isNaN(new Date(dateStr).getTime());
+  };
+
+  const isPastDate = (dateStr: string): boolean => {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const date = new Date(y, m - 1, d);
+    date.setHours(0, 0, 0, 0);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return date < now;
+  };
+  const clearFile = () => {
+    setFile(null);
+    setParsedChallenges([]);
+    setError("");
+  };
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
+
+      // Validate file extension
+      const fileExt = selectedFile.name.split(".").pop()?.toLowerCase();
+      if (fileExt !== "xlsx" && fileExt !== "xls") {
+        setError("Solo se permiten archivos Excel (.xlsx, .xls). Por favor seleccione un archivo con el formato correcto.");
+        return;
+      }
+
       setFile(selectedFile);
       setParsing(true);
       setError("");
@@ -49,27 +105,42 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
         const arrayBuffer = await selectedFile.arrayBuffer();
         const workbook = XLSX.read(arrayBuffer);
         
-        // Assume first sheet
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         
-        // Convert to JSON
         type ExcelRow = Record<string, string | number | undefined>;
         const jsonData = XLSX.utils.sheet_to_json(worksheet) as ExcelRow[];
-        
+
+        if (jsonData.length === 0) {
+          setError("El archivo Excel está vacío.");
+          return;
+        }
+
+        // Validate required column headers
+        const headers = Object.keys(jsonData[0]).map(h => h.toLowerCase());
+        const missingHeaders = REQUIRED_HEADERS.filter(h => !headers.includes(h));
+        if (missingHeaders.length > 0) {
+          setError(
+            `El archivo no tiene la estructura correcta. Columnas requeridas: Date, Title, Description, Type. ` +
+            `Para challenges tipo MultipleChoice también se requieren: Question, Options, CorrectAnswer.`,
+          );
+          return;
+        }
+
         // Group by Date + Title to handle multi-row questions
         const challengesMap = new Map<string, ParsedChallenge>();
 
         jsonData.forEach((row: ExcelRow) => {
-          const date = String(row.Date || row.date || new Date().toISOString().split("T")[0]);
-          const title = String(row.Title || row.title || "Untitled");
+          const rawDate = row.Date || row.date;
+          const date = normalizeDate(rawDate);
+          const title = String(row.Title || row.title || "").trim();
           const key = `${date}-${title}`;
 
           if (!challengesMap.has(key)) {
             challengesMap.set(key, {
-              title: title,
+              title,
               description: String(row.Description || row.description || ""),
-              date: date,
+              date,
               type: String(row.Type || row.type || "Audio"),
               questions: [],
             });
@@ -78,8 +149,8 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
           const challenge = challengesMap.get(key)!;
             
           // If MultipleChoice, add question from this row
-          if (challenge.type === "MultipleChoice") {
-            const qText = String(row.Question || row.question || "Untitled Question");
+          if (challenge.type === "MultipleChoice" || challenge.type === "MULTIPLE_CHOICE") {
+            const qText = String(row.Question || row.question || "");
             const rawOptions = row.Options || row.options;
             const correctAnswer = String(row.CorrectAnswer || row.correctAnswer || "");
                 
@@ -87,7 +158,7 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
               challenge.questions?.push({
                 text: qText,
                 options: String(rawOptions).split(",").map((o: string) => o.trim()),
-                correctAnswer: correctAnswer,
+                correctAnswer,
               });
             }
           }
@@ -95,23 +166,80 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
 
         const challenges = Array.from(challengesMap.values());
 
-        // Validation Loop
-        const invalid = challenges.find(c => 
-          c.type === "MultipleChoice" && 
+        // --- Comprehensive Validation ---
+        const validationErrors: string[] = [];
+
+        if (challenges.length === 0) {
+          validationErrors.push("No se encontraron datos válidos en el archivo Excel.");
+        }
+
+        // Max challenges limit
+        if (challenges.length > MAX_CHALLENGES) {
+          validationErrors.push(
+            `El máximo permitido es ${MAX_CHALLENGES} challenges por carga. Se encontraron ${challenges.length}.`,
+          );
+        }
+
+        // Invalid date formats
+        const invalidDates = challenges.filter(c => !isValidDateFormat(c.date));
+        if (invalidDates.length > 0) {
+          validationErrors.push(
+            `Fechas con formato inválido: ${invalidDates.map(c => `"${c.title}" → ${c.date}`).join(", ")}. ` +
+            `Use formato DD-MM-YYYY, DD/MM/YYYY o YYYY-MM-DD.`,
+          );
+        }
+
+        // Past dates
+        const pastDates = challenges.filter(c => isValidDateFormat(c.date) && isPastDate(c.date));
+        if (pastDates.length > 0) {
+          validationErrors.push(
+            `No se permiten fechas pasadas: ${pastDates.map(c => `"${c.title}" → ${c.date}`).join(", ")}.`,
+          );
+        }
+
+        // Duplicate dates within the batch
+        const dateCount = new Map<string, string[]>();
+        challenges.forEach(c => {
+          const titles = dateCount.get(c.date) || [];
+          titles.push(c.title);
+          dateCount.set(c.date, titles);
+        });
+        const duplicates = Array.from(dateCount.entries()).filter(([, titles]) => titles.length > 1);
+        if (duplicates.length > 0) {
+          validationErrors.push(
+            `Fechas duplicadas (solo 1 challenge diario): ${duplicates.map(([date, titles]) => `${date} (${titles.join(", ")})`).join("; ")}.`,
+          );
+        }
+
+        // Invalid types
+        const invalidTypes = challenges.filter(c => !VALID_TYPES.includes(c.type));
+        if (invalidTypes.length > 0) {
+          validationErrors.push(
+            `Tipos inválidos: ${invalidTypes.map(c => `"${c.title}" → ${c.type}`).join(", ")}. Solo se permiten: Audio, MultipleChoice.`,
+          );
+        }
+
+        // MultipleChoice without questions
+        const mcWithoutQ = challenges.filter(c => 
+          (c.type === "MultipleChoice" || c.type === "MULTIPLE_CHOICE") && 
             (!c.questions || c.questions.length === 0),
         );
+        if (mcWithoutQ.length > 0) {
+          validationErrors.push(
+            `Challenges MultipleChoice sin preguntas: ${mcWithoutQ.map(c => `"${c.title}"`).join(", ")}. ` +
+            `Requieren columnas: Question, Options, CorrectAnswer.`,
+          );
+        }
 
-        if (invalid) {
-          setError("Some Multiple Choice challenges have no valid questions (check columns: Question, Options, CorrectAnswer).");
-        } else if (challenges.length === 0) {
-          setError("No valid data found in the Excel file.");
+        if (validationErrors.length > 0) {
+          setError(validationErrors.join("\n"));
         } else {
           setParsedChallenges(challenges);
         }
 
       } catch (err) {
         console.error(err);
-        setError("Failed to parse Excel file. Please ensure it follows the template.");
+        setError("Error al procesar el archivo Excel. Asegúrese de que sigue la estructura requerida: Date, Title, Description, Type.");
       } finally {
         setParsing(false);
       }
@@ -119,15 +247,12 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
   };
 
   const handleSubmit = async () => {
-    // Transform parsed challenges to API format
     const challengesToCreate = parsedChallenges.map(c => {
-      // Map type to correct format
-      const typeMap: Record<string, "AUDIO" | "MULTIPLE_CHOICE" | "WRITING"> = {
+      const typeMap: Record<string, "AUDIO" | "MULTIPLE_CHOICE"> = {
         "Audio": "AUDIO",
+        "AUDIO": "AUDIO",
         "MultipleChoice": "MULTIPLE_CHOICE", 
         "MULTIPLE_CHOICE": "MULTIPLE_CHOICE",
-        "Writing": "WRITING",
-        "WRITING": "WRITING",
       };
       
       return {
@@ -146,10 +271,15 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
       };
     });
     
-    await bulkCreateChallenges(challengesToCreate);
-    setParsedChallenges([]);
-    setFile(null);
-    onClose();
+    const result = await bulkCreateChallenges(challengesToCreate);
+    
+    if (result.failed === 0 && result.created > 0) {
+      setParsedChallenges([]);
+      setFile(null);
+      onClose();
+    } else if (result.errors && result.errors.length > 0) {
+      setError(result.errors.join("\n"));
+    }
   };
 
   return (
@@ -186,12 +316,14 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
               <div className={`relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-all ${
                 file ? "border-green-500/30 bg-green-50" : "border-gray-200 hover:border-green-500/50 hover:bg-gray-50"
               }`}>
-                <input 
-                  type="file" 
-                  accept=".xlsx, .xls"
-                  onChange={handleFileChange}
-                  className="absolute inset-0 z-10 cursor-pointer opacity-0"
-                />
+                {!file && (
+                  <input 
+                    type="file" 
+                    accept=".xlsx, .xls"
+                    onChange={handleFileChange}
+                    className="absolute inset-0 z-10 cursor-pointer opacity-0"
+                  />
+                )}
                 <div className="mb-3 rounded-full bg-white p-3 shadow-sm">
                   <Upload className="h-8 w-8 text-green-600" />
                 </div>
@@ -199,14 +331,41 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
                   {file ? file.name : "Upload Excel File"}
                 </p>
                 <p className="text-sm text-gray-500">
-                    Supports .xlsx, .xls
+                    Supports .xlsx, .xls (máx. {MAX_CHALLENGES} challenges)
                 </p>
+                {file && (
+                  <button
+                    type="button"
+                    onClick={clearFile}
+                    className="mt-3 flex items-center gap-1.5 rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-200 transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Quitar archivo
+                  </button>
+                )}
+              </div>
+
+              {/* Required Structure Info */}
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm">
+                <p className="font-semibold text-blue-800 mb-2">📋 Estructura requerida del Excel:</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-blue-700">
+                  <p><span className="font-medium">Date</span> — Fecha (DD-MM-YYYY, DD/MM/YYYY o YYYY-MM-DD)</p>
+                  <p><span className="font-medium">Title</span> — Título del challenge</p>
+                  <p><span className="font-medium">Description</span> — Instrucciones</p>
+                  <p><span className="font-medium">Type</span> — Audio o MultipleChoice</p>
+                </div>
+                <p className="text-blue-600 mt-2 text-xs">Para tipo <strong>MultipleChoice</strong> agregar columnas: Question, Options (separadas por coma), CorrectAnswer</p>
               </div>
 
               {error && (
-                <div className="flex items-center gap-2 rounded-lg bg-red-50 p-4 text-sm text-red-600">
-                  <AlertCircle className="h-4 w-4" />
-                  {error}
+                <div className="flex gap-2 rounded-lg bg-red-50 p-4 text-sm text-red-600">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div className="space-y-1">
+                    {error.split("\n").map((line, i) => (
+                      // eslint-disable-next-line react/no-array-index-key
+                      <p key={`err-${i}`}>{line}</p>
+                    ))}
+                  </div>
                 </div>
               )}
 

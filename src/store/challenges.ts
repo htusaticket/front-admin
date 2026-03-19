@@ -16,7 +16,7 @@ interface BackendChallenge {
   id: number;
   title: string;
   instructions: string;
-  type: "AUDIO" | "MULTIPLE_CHOICE" | "WRITING";
+  type: "AUDIO" | "MULTIPLE_CHOICE";
   date: string; // Backend uses 'date'
   questions?: QuizQuestion[];
   audioUrl?: string;
@@ -34,11 +34,10 @@ export interface Challenge {
   id: number;
   title: string;
   description: string;
-  type: "AUDIO" | "MULTIPLE_CHOICE" | "WRITING";
+  type: "AUDIO" | "MULTIPLE_CHOICE";
   scheduledDate: string;
   quizQuestions?: QuizQuestion[];
   audioUrl?: string;
-  writingPrompt?: string;
   points: number;
   isActive: boolean;
   visibleForSkillBuilder: boolean;
@@ -85,11 +84,10 @@ export interface ChallengesListResponse {
 export interface CreateChallengeData {
   title: string;
   description: string;
-  type: "AUDIO" | "MULTIPLE_CHOICE" | "WRITING";
+  type: "AUDIO" | "MULTIPLE_CHOICE";
   scheduledDate: string;
   quizQuestions?: QuizQuestion[];
   audioUrl?: string;
-  writingPrompt?: string;
   points?: number;
   visibleForSkillBuilder?: boolean;
 }
@@ -212,7 +210,7 @@ export const useChallengesStore = create<ChallengesStore>((set, get) => ({
           text: q.question,
           options: q.options,
           correctAnswer: typeof q.correctAnswer === "string"
-            ? q.options.indexOf(q.correctAnswer)
+            ? Math.max(0, q.options.indexOf(q.correctAnswer))
             : q.correctAnswer,
         })),
         audioUrl: data.audioUrl,
