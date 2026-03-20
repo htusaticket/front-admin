@@ -35,6 +35,7 @@ export interface SubscriptionsFilters {
   status?: SubscriptionStatus;
   plan?: UserPlan;
   search?: string;
+  hasPaid?: boolean;
 }
 
 // ==================== STATE ====================
@@ -104,6 +105,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>((set, get) => ({
       if (currentFilters.status) params.append("status", currentFilters.status);
       if (currentFilters.plan) params.append("plan", currentFilters.plan);
       if (currentFilters.search) params.append("search", currentFilters.search);
+      if (currentFilters.hasPaid !== undefined) params.append("hasPaid", currentFilters.hasPaid.toString());
 
       const response = await api.get<ApiResponse<PaginatedResponse<Subscription>>>(
         `/api/admin/subscriptions?${params.toString()}`,

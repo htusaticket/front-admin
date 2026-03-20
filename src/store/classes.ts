@@ -25,6 +25,12 @@ interface ClassesState {
 interface ClassesActions {
   fetchClasses: (query?: GetClassesQuery) => Promise<void>;
   createClass: (data: CreateClassPayload) => Promise<{ success: boolean; message?: string }>;
+  bulkCreateClasses: (
+    classes: CreateClassPayload[]
+  ) => Promise<{
+    success: boolean; message?: string;
+    created?: number; failed?: number;
+  }>;
   updateClass: (classId: number, data: Partial<CreateClassPayload>) => Promise<{ success: boolean; message?: string }>;
   deleteClass: (classId: number) => Promise<{ success: boolean; message?: string }>;
   fetchClassAttendees: (classId: number) => Promise<{ success: boolean; message?: string }>;
@@ -104,6 +110,27 @@ export const useClassesStore = create<ClassesStore>((set, get) => ({
       
       set({ isLoading: false });
       return { success: true, message: response.data.message };
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      set({ error: errorMessage, isLoading: false });
+      return { success: false, message: errorMessage };
+    }
+  },
+
+  bulkCreateClasses: async (classes: CreateClassPayload[]) => {
+    set({ isLoading: true, error: null });
+    
+    try {
+      const response = await api.post<ApiResponse<{ created: number; failed: number; errors: string[] }>>(
+        "/api/admin/classes/bulk",
+        { classes },
+      );
+      
+      await get().fetchClasses({ page: 1, limit: get().limit });
+      
+      set({ isLoading: false });
+      const data = response.data.data;
+      return { success: true, message: response.data.message, created: data.created, failed: data.failed };
     } catch (error) {
       const errorMessage = getErrorMessage(error);
       set({ error: errorMessage, isLoading: false });

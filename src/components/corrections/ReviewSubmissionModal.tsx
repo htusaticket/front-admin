@@ -98,6 +98,7 @@ export function ReviewSubmissionModal({ isOpen, onClose, submission }: ReviewSub
 
   const studentName = submission.studentName;
   const studentInitial = submission.studentName?.charAt(0) || "?";
+  const isAlreadyReviewed = submission.status !== "PENDING";
 
   return (
     <AnimatePresence>
@@ -218,82 +219,125 @@ export function ReviewSubmissionModal({ isOpen, onClose, submission }: ReviewSub
                 </div>
               )}
 
-              {/* Review Form */}
-              <form onSubmit={handleSubmit} className="space-y-4 pt-4 border-t border-gray-100">
-                {/* Status Selection */}
-                <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-3">
-                        Review Decision
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
+              {/* Review Form or Read-only Feedback */}
+              {isAlreadyReviewed ? (
+                <div className="space-y-4 pt-4 border-t border-gray-100">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-900 mb-3">
+                      Review Decision
+                    </label>
+                    <div className={`flex items-center gap-2 p-4 rounded-xl border-2 ${
+                      submission.status === "APPROVED"
+                        ? "border-green-500 bg-green-50 text-green-700"
+                        : "border-amber-500 bg-amber-50 text-amber-700"
+                    }`}>
+                      {submission.status === "APPROVED" ? (
+                        <ThumbsUp className="h-5 w-5" />
+                      ) : (
+                        <AlertTriangle className="h-5 w-5" />
+                      )}
+                      <span className="font-bold">
+                        {submission.status === "APPROVED" ? "Approved" : "Needs Improvement"}
+                      </span>
+                    </div>
+                  </div>
+                  {submission.feedback && (
+                    <div>
+                      <label className="block text-sm font-bold text-gray-900 mb-2">
+                        Feedback
+                      </label>
+                      <div className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700 whitespace-pre-wrap">
+                        {submission.feedback}
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex justify-end">
                     <button
                       type="button"
-                      onClick={() => setSelectedStatus("APPROVED")}
-                      className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                        selectedStatus === "APPROVED"
-                          ? "border-green-500 bg-green-50 text-green-700"
-                          : "border-gray-200 hover:border-green-200 text-gray-600"
-                      }`}
+                      onClick={handleClose}
+                      className="rounded-xl px-6 py-2 font-semibold text-gray-600 hover:bg-gray-200"
                     >
-                      <ThumbsUp className="h-5 w-5" />
-                      <span className="font-bold">Approve</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedStatus("NEEDS_IMPROVEMENT")}
-                      className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                        selectedStatus === "NEEDS_IMPROVEMENT"
-                          ? "border-amber-500 bg-amber-50 text-amber-700"
-                          : "border-gray-200 hover:border-amber-200 text-gray-600"
-                      }`}
-                    >
-                      <AlertTriangle className="h-5 w-5" />
-                      <span className="font-bold">Needs Work</span>
+                      Close
                     </button>
                   </div>
                 </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-4 pt-4 border-t border-gray-100">
+                  {/* Status Selection */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-900 mb-3">
+                        Review Decision
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStatus("APPROVED")}
+                        className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                          selectedStatus === "APPROVED"
+                            ? "border-green-500 bg-green-50 text-green-700"
+                            : "border-gray-200 hover:border-green-200 text-gray-600"
+                        }`}
+                      >
+                        <ThumbsUp className="h-5 w-5" />
+                        <span className="font-bold">Approve</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStatus("NEEDS_IMPROVEMENT")}
+                        className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                          selectedStatus === "NEEDS_IMPROVEMENT"
+                            ? "border-amber-500 bg-amber-50 text-amber-700"
+                            : "border-gray-200 hover:border-amber-200 text-gray-600"
+                        }`}
+                      >
+                        <AlertTriangle className="h-5 w-5" />
+                        <span className="font-bold">Needs Work</span>
+                      </button>
+                    </div>
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-2">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-900 mb-2">
                            Feedback {selectedStatus === "NEEDS_IMPROVEMENT" && <span className="text-red-500">*</span>}
-                  </label>
-                  <textarea 
-                    required={selectedStatus === "NEEDS_IMPROVEMENT"}
-                    rows={4}
-                    className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all"
-                    placeholder="Write your constructive feedback here..."
-                    value={feedback}
-                    onChange={(e) => setFeedback(e.target.value)}
-                  />
-                  {selectedStatus === "NEEDS_IMPROVEMENT" && (
-                    <p className="text-xs text-gray-500 mt-1">
+                    </label>
+                    <textarea 
+                      required={selectedStatus === "NEEDS_IMPROVEMENT"}
+                      rows={4}
+                      className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all"
+                      placeholder="Write your constructive feedback here..."
+                      value={feedback}
+                      onChange={(e) => setFeedback(e.target.value)}
+                    />
+                    {selectedStatus === "NEEDS_IMPROVEMENT" && (
+                      <p className="text-xs text-gray-500 mt-1">
                             Feedback is required when requesting improvements
-                    </p>
-                  )}
-                </div>
-                    
-                <div className="flex justify-end gap-3">
-                  <button 
-                    type="button" 
-                    onClick={handleClose} 
-                    className="rounded-xl px-4 py-2 font-semibold text-gray-600 hover:bg-gray-200"
-                  >
-                          Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    disabled={!selectedStatus || isLoading || (selectedStatus === "NEEDS_IMPROVEMENT" && !feedback.trim())}
-                    className="flex items-center gap-2 rounded-xl bg-green-600 px-6 py-2 font-bold text-white transition-all hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
+                      </p>
                     )}
+                  </div>
+                    
+                  <div className="flex justify-end gap-3">
+                    <button 
+                      type="button" 
+                      onClick={handleClose} 
+                      className="rounded-xl px-4 py-2 font-semibold text-gray-600 hover:bg-gray-200"
+                    >
+                          Cancel
+                    </button>
+                    <button 
+                      type="submit" 
+                      disabled={!selectedStatus || isLoading || (selectedStatus === "NEEDS_IMPROVEMENT" && !feedback.trim())}
+                      className="flex items-center gap-2 rounded-xl bg-green-600 px-6 py-2 font-bold text-white transition-all hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
                           Submit Review
-                  </button>
-                </div>
-              </form>
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
 
           </motion.div>

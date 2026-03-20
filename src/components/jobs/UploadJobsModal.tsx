@@ -16,11 +16,19 @@ interface UploadJobsModalProps {
 interface ParsedJob {
   title: string;
   name: string;
+  email: string;
+  website: string;
   social: string;
+  recruiterSocial: string;
   offer: string;
   revenue: string;
   hiring: string;
   ote: string;
+  closerOte: string;
+  csmOte: string;
+  setterOte: string;
+  dmSetterOte: string;
+  managerOte: string;
   notes: string;
   code: string;
 }
@@ -36,21 +44,10 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
 
   const parseText = (text: string) => {
     try {
-      // Split by double newlines or look for patterns roughly
-      // The structure seems to end with "Apply Here - CODE: XXXXX"
-      // We can split by that pattern to separate jobs, then parse lines.
-      
       const jobs: ParsedJob[] = [];
-      const _blocks = text.split(/Apply Here - CODE: \d+/i);
       
-      // Get all codes to match back to blocks if needed, or just split regex keeping delimiters
-      // Let's rely on a simpler block split by double newline chunks and keywords.
-      
-      // Better approach: Split by the full separator that seems consistent?
-      // Actually, let's process line by line or regex match for each job block.
-      
-      // Regex to capture full blocks ending in code
-      const jobBlockRegex = /([\s\S]*?)Apply Here - CODE: (\d+)/g;
+      // Regex to capture full blocks ending in CODE: XXXXX
+      const jobBlockRegex = /([\s\S]*?)(?:Apply Here - )?CODE:\s*(\d+)/gi;
       
       let match;
       while ((match = jobBlockRegex.exec(text)) !== null) {
@@ -61,29 +58,48 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
         
         if (lines.length === 0) continue;
 
-        // Extract Title (First Line)
+        // First line is always the title
         const title = lines[0];
         
-        // Helper to extract value by key
+        // Helper to extract value by key (case-insensitive)
         const getValue = (key: string) => {
           const line = lines.find(l => l.toLowerCase().startsWith(`${key.toLowerCase()}:`));
           return line ? line.substring(key.length + 1).trim() : "";
         };
 
+        // Parse all OTE variants into a combined string
+        const mainOte = getValue("OTE");
+        const closerOte = getValue("Closer OTE");
+        const csmOte = getValue("CSM OTE");
+        const setterOte = getValue("Setter OTE");
+        const dmSetterOte = getValue("DM Setter OTE");
+        const managerOte = getValue("Manager OTE");
+
         jobs.push({
-          title: title,
+          title,
           name: getValue("Name"),
-          social: getValue("Social") || getValue("Biz Social") || getValue("Website"),
+          email: getValue("Email"),
+          website: getValue("Website"),
+          social: getValue("Social") || getValue("Biz Social"),
+          recruiterSocial: getValue("Recruiter Social"),
           offer: getValue("Offer"),
           revenue: getValue("Revenue"),
           hiring: getValue("Hiring"),
-          ote: getValue("OTE") || `${getValue("Closer OTE")} / ${getValue("Setter OTE")}`, // Handle composite
+          ote: mainOte,
+          closerOte,
+          csmOte,
+          setterOte,
+          dmSetterOte,
+          managerOte,
           notes: getValue("Notes"),
-          code: code,
+          code,
         });
       }
 
       setParsedJobs(jobs);
+      if (jobs.length === 0) {
+        setError("No job offers found. Make sure the document ends each job with CODE: XXXXX");
+      }
     } catch (err) {
       console.error(err);
       setError("Failed to parse the file content. Ensure it matches the expected format.");
@@ -128,19 +144,45 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
   const handleSubmit = async () => {
     // Transform parsed jobs to API format
     const jobsToCreate = parsedJobs.map(job => {
-      // Parse OTE string like "$45,000 - $60,000" or "45000/60000" into min/max
+      // Collect all OTE values for parsing min/max
+      const allOteStrings = [
+        job.ote, job.closerOte, job.csmOte,
+        job.setterOte, job.dmSetterOte, job.managerOte,
+      ].filter(Boolean);
+      const allOteNumbers: number[] = [];
+      for (const oteStr of allOteStrings) {
+        const nums = oteStr.match(/[\d,]+/g)?.map(n => parseInt(n.replace(/,/g, ""), 10)).filter(n => !isNaN(n));
+        if (nums) allOteNumbers.push(...nums);
+      }
+
       let oteMin: number | undefined;
       let oteMax: number | undefined;
-      if (job.ote) {
-        const numbers = job.ote.match(/[\d,]+/g)?.map(n => parseInt(n.replace(/,/g, ""), 10)).filter(n => !isNaN(n));
-        if (numbers && numbers.length >= 2) {
-          oteMin = Math.min(numbers[0], numbers[1]);
-          oteMax = Math.max(numbers[0], numbers[1]);
-        } else if (numbers && numbers.length === 1) {
-          oteMin = numbers[0];
-          oteMax = numbers[0];
-        }
+      if (allOteNumbers.length >= 2) {
+        oteMin = Math.min(...allOteNumbers);
+        oteMax = Math.max(...allOteNumbers);
+      } else if (allOteNumbers.length === 1) {
+        oteMin = allOteNumbers[0];
+        oteMax = allOteNumbers[0];
       }
+
+      // Build salary range string - clean min/max format for display
+      let salaryRange: string | undefined;
+      if (oteMin && oteMax && oteMin !== oteMax) {
+        salaryRange = `$${oteMin.toLocaleString()} - $${oteMax.toLocaleString()}/Mo`;
+      } else if (oteMin) {
+        salaryRange = `$${oteMin.toLocaleString()}/Mo`;
+      } else if (job.ote) {
+        salaryRange = job.ote;
+      }
+
+      // Build detailed OTE breakdown for description
+      const oteParts: string[] = [];
+      if (job.closerOte) oteParts.push(`Closer OTE: ${job.closerOte}`);
+      if (job.csmOte) oteParts.push(`CSM OTE: ${job.csmOte}`);
+      if (job.setterOte) oteParts.push(`Setter OTE: ${job.setterOte}`);
+      if (job.dmSetterOte) oteParts.push(`DM Setter OTE: ${job.dmSetterOte}`);
+      if (job.managerOte) oteParts.push(`Manager OTE: ${job.managerOte}`);
+      if (job.ote && oteParts.length === 0) oteParts.push(`OTE: ${job.ote}`);
 
       // Parse revenue
       let revenue: number | undefined;
@@ -149,17 +191,34 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
         if (!isNaN(revenueNum)) revenue = revenueNum;
       }
 
+      // Build clean description
+      const descParts: string[] = [];
+      if (job.offer) descParts.push(job.offer);
+      if (job.revenue) descParts.push(`Revenue: ${job.revenue}`);
+      if (oteParts.length > 0) {
+        descParts.push("");
+        descParts.push("Compensation Breakdown:");
+        descParts.push(...oteParts);
+      }
+      if (job.notes) {
+        descParts.push("");
+        descParts.push(job.notes);
+      }
+      const description = descParts.join("\n") || "Job offer from bulk upload";
+
       return {
         title: job.title,
-        company: job.name || "Unknown Company",
-        location: "Remote",
-        description: job.offer || job.notes || "Job offer from bulk upload",
+        company: job.name || "Unknown",
+        description,
         type: job.hiring || "Setter",
-        salaryRange: job.ote || undefined,
+        salaryRange,
         oteMin,
         oteMax,
         revenue,
-        requirements: job.offer ? [job.offer] : [],
+        requirements: [],
+        social: job.social || job.recruiterSocial || undefined,
+        website: job.website || undefined,
+        email: job.email || undefined,
       };
     });
     
@@ -201,16 +260,18 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* File Input */}
               <div className={`relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-all ${
-                file ? "border-brand-primary/30 bg-brand-primary/5" : "border-gray-200 hover:border-brand-primary/50 hover:bg-gray-50"
+                file ? "border-green-500/30 bg-green-50" : "border-gray-200 hover:border-brand-primary/50 hover:bg-gray-50"
               }`}>
-                <input 
-                  type="file" 
-                  accept=".txt,.doc,.docx" // Allowing txt for easy testing
-                  onChange={handleFileChange}
-                  className="absolute inset-0 z-10 cursor-pointer opacity-0"
-                />
+                {!file && (
+                  <input 
+                    type="file" 
+                    accept=".txt,.doc,.docx"
+                    onChange={handleFileChange}
+                    className="absolute inset-0 z-10 cursor-pointer opacity-0"
+                  />
+                )}
                 <div className="mb-3 rounded-full bg-white p-3 shadow-sm">
-                  <FileText className="h-8 w-8 text-brand-primary" />
+                  <FileText className={`h-8 w-8 ${file ? "text-green-600" : "text-brand-primary"}`} />
                 </div>
                 <p className="font-semibold text-gray-900">
                   {file ? file.name : "Click to upload document"}
@@ -218,6 +279,16 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
                 <p className="text-sm text-gray-500">
                     Supports .docx, .doc, .txt
                 </p>
+                {file && (
+                  <button
+                    type="button"
+                    onClick={() => { setFile(null); setParsedJobs([]); setError(""); }}
+                    className="mt-3 flex items-center gap-1.5 rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-200 transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Remove file
+                  </button>
+                )}
               </div>
 
               {error && (
@@ -251,9 +322,12 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
                           <span className="font-bold text-gray-900 line-clamp-1">{job.title}</span>
                           <span className="font-mono text-xs bg-gray-200 px-2 py-0.5 rounded text-gray-600">#{job.code}</span>
                         </div>
+                        <p className="text-xs text-gray-500 mb-1">{job.name || "No name"}</p>
                         <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
-                          <span>Role: {job.hiring}</span>
-                          <span>OTE: {job.ote}</span>
+                          <span>Role: {job.hiring || "-"}</span>
+                          <span>OTE: {job.ote || job.closerOte || job.setterOte || "-"}</span>
+                          {job.social && <span className="truncate">Social: {job.social}</span>}
+                          {job.website && <span className="truncate">Web: {job.website}</span>}
                         </div>
                       </div>
                     ))}

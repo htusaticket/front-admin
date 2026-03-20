@@ -29,6 +29,9 @@ export interface JobOffer {
   requirements: string[];
   isActive: boolean;
   applicationsCount: number;
+  social?: string | null;
+  website?: string | null;
+  email?: string | null;
   createdAt: string;
   updatedAt: string;
   applications?: JobApplication[];
@@ -45,15 +48,17 @@ export interface JobsListResponse {
 export interface CreateJobData {
   title: string;
   company: string;
-  location: string;
   salaryRange?: string;
   oteMin?: number;
   oteMax?: number;
   revenue?: number;
-  type: string;
-  description: string;
-  requirements: string[];
+  type?: string;
+  description?: string;
+  requirements?: string[];
   isActive?: boolean;
+  social?: string;
+  website?: string;
+  email?: string;
 }
 
 export interface BulkCreateResponse {

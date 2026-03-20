@@ -371,10 +371,25 @@ export default function SubscriptionsPage() {
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-2">Payment</label>
+                  <select
+                    value={filters.hasPaid === undefined ? "" : filters.hasPaid ? "true" : "false"}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      fetchSubscriptions({ hasPaid: val === "" ? undefined : val === "true", page: 1 });
+                    }}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-primary"
+                  >
+                    <option value="">All</option>
+                    <option value="true">Paid</option>
+                    <option value="false">Pending</option>
+                  </select>
+                </div>
                 <button
                   onClick={() => {
-                    setFilters({ status: undefined, plan: undefined });
-                    fetchSubscriptions({ status: undefined, plan: undefined, page: 1 });
+                    setFilters({ status: undefined, plan: undefined, hasPaid: undefined });
+                    fetchSubscriptions({ status: undefined, plan: undefined, hasPaid: undefined, page: 1 });
                     setShowFilters(false);
                   }}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
