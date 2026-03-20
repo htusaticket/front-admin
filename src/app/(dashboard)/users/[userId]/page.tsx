@@ -438,19 +438,27 @@ export default function UserDetailPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <div key={stat.label} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">{stat.label}</p>
-                <p className="mt-1 font-display text-2xl font-bold text-gray-900">{stat.value}</p>
-              </div>
-              <div className={`p-2 rounded-lg ${stat.bg}`}>
-                <stat.icon className={`h-5 w-5 ${stat.color}`} />
+        {stats
+          .filter((stat) => {
+            // Hide class-attendance and strikes stats for JOB_UPLOADER
+            if (user.role === "JOB_UPLOADER") {
+              return stat.label !== "Classes Attended" && stat.label !== "Avg. Attendance" && stat.label !== "Active Strikes";
+            }
+            return true;
+          })
+          .map((stat) => (
+            <div key={stat.label} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">{stat.label}</p>
+                  <p className="mt-1 font-display text-2xl font-bold text-gray-900">{stat.value}</p>
+                </div>
+                <div className={`p-2 rounded-lg ${stat.bg}`}>
+                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
 
       {/* Tabs */}
@@ -461,20 +469,28 @@ export default function UserDetailPage() {
             { id: "academy", label: "Academy", icon: BookOpen },
             { id: "classes", label: "Classes & Attendance", icon: Calendar },
             { id: "strikes", label: "Strikes", icon: AlertTriangle },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 border-b-2 py-4 text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? "border-brand-primary text-brand-primary"
-                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-              }`}
-            >
-              <tab.icon className="h-4 w-4" />
-              {tab.label}
-            </button>
-          ))}
+          ]
+            .filter((tab) => {
+              // Hide classes and strikes tabs for JOB_UPLOADER users
+              if (user.role === "JOB_UPLOADER") {
+                return tab.id !== "classes" && tab.id !== "strikes";
+              }
+              return true;
+            })
+            .map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 border-b-2 py-4 text-sm font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? "border-brand-primary text-brand-primary"
+                    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                }`}
+              >
+                <tab.icon className="h-4 w-4" />
+                {tab.label}
+              </button>
+            ))}
         </nav>
       </div>
 

@@ -12,12 +12,14 @@ import {
   Link as LinkIcon,
   X,
   Check,
+  Upload,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 import { AddClassModal } from "@/components/classes/AddClassModal";
 import { AttendanceModal } from "@/components/classes/AttendanceModal";
+import { UploadClassesModal } from "@/components/classes/UploadClassesModal";
 import { useModalLock } from "@/hooks/useModalLock";
 import { useClassesStore } from "@/store/classes";
 import type { AdminClass, CreateClassPayload } from "@/types/admin";
@@ -67,6 +69,7 @@ export default function ClassesPage() {
   } = useClassesStore();
 
   const [isAddClassOpen, setIsAddClassOpen] = useState(false);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [classTab, setClassTab] = useState<"upcoming" | "finished">("upcoming");
   const [attendanceClass, setAttendanceClass] = useState<{ id: number; title: string; date: string } | null>(null);
   const [editingClass, setEditingClass] = useState<AdminClass | null>(null);
@@ -173,13 +176,22 @@ export default function ClassesPage() {
             Manage upcoming classes and workshops
           </p>
         </div>
-        <button
-          onClick={() => setIsAddClassOpen(true)}
-          className="flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary/90 active:scale-95"
-        >
-          <Calendar className="h-5 w-5" />
-          Schedule Class
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setIsUploadOpen(true)}
+            className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-bold text-gray-700 transition-all hover:border-brand-primary/20 hover:bg-brand-primary/5 hover:text-brand-primary"
+          >
+            <Upload className="h-5 w-5" />
+            Bulk Upload
+          </button>
+          <button
+            onClick={() => setIsAddClassOpen(true)}
+            className="flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary/90 active:scale-95"
+          >
+            <Calendar className="h-5 w-5" />
+            Schedule Class
+          </button>
+        </div>
       </div>
 
       {/* Error */}
@@ -396,6 +408,11 @@ export default function ClassesPage() {
       <AddClassModal 
         isOpen={isAddClassOpen} 
         onClose={() => setIsAddClassOpen(false)} 
+      />
+
+      <UploadClassesModal
+        isOpen={isUploadOpen}
+        onClose={() => setIsUploadOpen(false)}
       />
       
       <AttendanceModal 

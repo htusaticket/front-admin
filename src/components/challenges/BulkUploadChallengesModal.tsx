@@ -121,8 +121,8 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
         const missingHeaders = REQUIRED_HEADERS.filter(h => !headers.includes(h));
         if (missingHeaders.length > 0) {
           setError(
-            `El archivo no tiene la estructura correcta. Columnas requeridas: Date, Title, Description, Type. ` +
-            `Para challenges tipo MultipleChoice también se requieren: Question, Options, CorrectAnswer.`,
+            "El archivo no tiene la estructura correcta. Columnas requeridas: Date, Title, Description, Type. " +
+            "Para challenges tipo MultipleChoice también se requieren: Question, Options, CorrectAnswer.",
           );
           return;
         }
@@ -185,7 +185,7 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
         if (invalidDates.length > 0) {
           validationErrors.push(
             `Fechas con formato inválido: ${invalidDates.map(c => `"${c.title}" → ${c.date}`).join(", ")}. ` +
-            `Use formato DD-MM-YYYY, DD/MM/YYYY o YYYY-MM-DD.`,
+            "Use formato DD-MM-YYYY, DD/MM/YYYY o YYYY-MM-DD.",
           );
         }
 
@@ -227,7 +227,7 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
         if (mcWithoutQ.length > 0) {
           validationErrors.push(
             `Challenges MultipleChoice sin preguntas: ${mcWithoutQ.map(c => `"${c.title}"`).join(", ")}. ` +
-            `Requieren columnas: Question, Options, CorrectAnswer.`,
+            "Requieren columnas: Question, Options, CorrectAnswer.",
           );
         }
 

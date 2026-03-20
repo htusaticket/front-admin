@@ -196,14 +196,17 @@ export default function CorrectionsPage() {
                       Review
                     </button>
                   ) : (
-                    <span className={`flex items-center gap-2 px-4 py-2 font-bold rounded-xl border ${
-                      submission.status === "APPROVED"
-                        ? "text-green-600 bg-green-50 border-green-100"
-                        : "text-amber-600 bg-amber-50 border-amber-100"
-                    }`}>
+                    <button
+                      onClick={() => handleReviewClick(submission)}
+                      className={`flex items-center gap-2 px-4 py-2 font-bold rounded-xl border cursor-pointer transition-all hover:shadow-md ${
+                        submission.status === "APPROVED"
+                          ? "text-green-600 bg-green-50 border-green-100 hover:bg-green-100"
+                          : "text-amber-600 bg-amber-50 border-amber-100 hover:bg-amber-100"
+                      }`}
+                    >
                       <CheckCircle2 className="h-4 w-4" />
                       {submission.status === "APPROVED" ? "Approved" : "Needs Work"}
-                    </span>
+                    </button>
                   )}
                 </div>
               </motion.div>

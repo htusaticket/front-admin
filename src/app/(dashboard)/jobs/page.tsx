@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import {
   Briefcase,
   DollarSign,
-  MapPin,
   Building,
   Search,
   CheckCircle,
@@ -14,6 +13,9 @@ import {
   Trash2,
   Plus,
   Pencil,
+  Globe,
+  ExternalLink,
+  Mail,
 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 
@@ -316,13 +318,33 @@ export default function JobsPage() {
                     {job.company}
                   </p>
                   <div className="space-y-1 text-xs text-gray-600">
+                    {job.social && (
+                      <a
+                        href={job.social.startsWith("http") ? job.social : `https://${job.social}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-2 text-brand-primary hover:underline"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Social
+                      </a>
+                    )}
+                    {job.website && (
+                      <a
+                        href={job.website.startsWith("http") ? job.website : `https://${job.website}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-2 text-brand-primary hover:underline"
+                      >
+                        <Globe className="h-3.5 w-3.5" />
+                        Website
+                      </a>
+                    )}
                     <div className="flex items-center gap-2">
-                      <MapPin className="h-3.5 w-3.5" />
-                      {job.location}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-3.5 w-3.5" />
-                      {formatSalary(job)}
+                      <DollarSign className="h-3.5 w-3.5 shrink-0" />
+                      <span className="line-clamp-1">{formatSalary(job)}</span>
                     </div>
                   </div>
                   <div className="mt-3 flex items-center justify-between">
@@ -367,10 +389,6 @@ export default function JobsPage() {
 
                     <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                       <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-gray-400" />
-                        <span>{selectedJob.location}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
                         <DollarSign className="h-4 w-4 text-gray-400" />
                         <span>{formatSalary(selectedJob)}</span>
                       </div>
@@ -378,6 +396,37 @@ export default function JobsPage() {
                         <Briefcase className="h-4 w-4 text-gray-400" />
                         <span>{selectedJob.type}</span>
                       </div>
+                      {selectedJob.social && (
+                        <a
+                          href={selectedJob.social.startsWith("http") ? selectedJob.social : `https://${selectedJob.social}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-brand-primary hover:underline"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          <span>Social</span>
+                        </a>
+                      )}
+                      {selectedJob.website && (
+                        <a
+                          href={selectedJob.website.startsWith("http") ? selectedJob.website : `https://${selectedJob.website}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-brand-primary hover:underline"
+                        >
+                          <Globe className="h-4 w-4" />
+                          <span>Website</span>
+                        </a>
+                      )}
+                      {selectedJob.email && (
+                        <a
+                          href={`mailto:${selectedJob.email}`}
+                          className="flex items-center gap-2 text-brand-primary hover:underline"
+                        >
+                          <Mail className="h-4 w-4" />
+                          <span>{selectedJob.email}</span>
+                        </a>
+                      )}
                     </div>
                   </div>
 
@@ -385,7 +434,7 @@ export default function JobsPage() {
                     <h3 className="mb-3 font-display text-lg font-bold text-brand-primary">
                 Job Description
                     </h3>
-                    <p className="text-gray-700 leading-relaxed">
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
                       {selectedJob.description}
                     </p>
 

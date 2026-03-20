@@ -38,13 +38,15 @@ export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
   const [formData, setFormData] = useState({
     title: "",
     company: "",
-    location: "",
     oteMin: "",
     oteMax: "",
     revenue: "",
     type: "Setter",
     description: "",
     isActive: true,
+    social: "",
+    website: "",
+    email: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -57,13 +59,15 @@ export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
       setFormData({
         title: job.title || "",
         company: job.company || "",
-        location: job.location || "",
         oteMin: job.oteMin ? String(job.oteMin) : "",
         oteMax: job.oteMax ? String(job.oteMax) : "",
         revenue: job.revenue ? String(job.revenue) : "",
         type: job.type || "Setter",
         description: job.description || "",
         isActive: job.isActive ?? true,
+        social: job.social || "",
+        website: job.website || "",
+        email: job.email || "",
       });
 
       const reqs = (job.requirements && job.requirements.length > 0)
@@ -107,8 +111,6 @@ export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
 
     if (!formData.title.trim()) newErrors.title = "Title is required";
     if (!formData.company.trim()) newErrors.company = "Company is required";
-    if (!formData.location.trim()) newErrors.location = "Location is required";
-    if (!formData.description.trim()) newErrors.description = "Description is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -120,15 +122,16 @@ export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
     const jobData = {
       title: formData.title.trim(),
       company: formData.company.trim(),
-      location: formData.location.trim(),
-
       oteMin: formData.oteMin ? parseInt(formData.oteMin) : undefined,
       oteMax: formData.oteMax ? parseInt(formData.oteMax) : undefined,
       revenue: formData.revenue ? parseInt(formData.revenue) : undefined,
       type: formData.type,
-      description: formData.description.trim(),
+      description: formData.description.trim() || undefined,
       requirements: requirements.map((r) => r.value).filter((r) => r.trim()),
       isActive: formData.isActive,
+      social: formData.social.trim() || undefined,
+      website: formData.website.trim() || undefined,
+      email: formData.email.trim() || undefined,
     };
 
     const result = await updateJob(job.id, jobData);
@@ -195,45 +198,64 @@ export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
                 )}
               </div>
 
-              {/* Company & Location */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Company */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Company *
+                </label>
+                <input
+                  type="text"
+                  value={formData.company}
+                  onChange={(e) => handleInputChange("company", e.target.value)}
+                  placeholder="e.g. Digital Agency Plus"
+                  className={`w-full rounded-xl border p-3 text-sm outline-none transition-colors ${
+                    errors.company
+                      ? "border-red-300 focus:border-red-500"
+                      : "border-gray-200 focus:border-brand-primary"
+                  }`}
+                />
+                {errors.company && (
+                  <p className="mt-1 text-xs text-red-500">{errors.company}</p>
+                )}
+              </div>
+
+              {/* Social / Website / Email */}
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      Company *
+                      Social Link
                   </label>
                   <input
                     type="text"
-                    value={formData.company}
-                    onChange={(e) => handleInputChange("company", e.target.value)}
-                    placeholder="e.g. Digital Agency Plus"
-                    className={`w-full rounded-xl border p-3 text-sm outline-none transition-colors ${
-                      errors.company
-                        ? "border-red-300 focus:border-red-500"
-                        : "border-gray-200 focus:border-brand-primary"
-                    }`}
+                    value={formData.social}
+                    onChange={(e) => handleInputChange("social", e.target.value)}
+                    placeholder="LinkedIn / Instagram URL"
+                    className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition-colors focus:border-brand-primary"
                   />
-                  {errors.company && (
-                    <p className="mt-1 text-xs text-red-500">{errors.company}</p>
-                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      Location *
+                      Website
                   </label>
                   <input
                     type="text"
-                    value={formData.location}
-                    onChange={(e) => handleInputChange("location", e.target.value)}
-                    placeholder="e.g. Remote - Worldwide"
-                    className={`w-full rounded-xl border p-3 text-sm outline-none transition-colors ${
-                      errors.location
-                        ? "border-red-300 focus:border-red-500"
-                        : "border-gray-200 focus:border-brand-primary"
-                    }`}
+                    value={formData.website}
+                    onChange={(e) => handleInputChange("website", e.target.value)}
+                    placeholder="https://example.com"
+                    className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition-colors focus:border-brand-primary"
                   />
-                  {errors.location && (
-                    <p className="mt-1 text-xs text-red-500">{errors.location}</p>
-                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      Contact Email
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    placeholder="contact@company.com"
+                    className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition-colors focus:border-brand-primary"
+                  />
                 </div>
               </div>
 
@@ -259,39 +281,60 @@ export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      OTE Min ($)
+                      OTE Min
                   </label>
-                  <input
-                    type="number"
-                    value={formData.oteMin}
-                    onChange={(e) => handleInputChange("oteMin", e.target.value)}
-                    placeholder="45000"
-                    className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition-colors focus:border-brand-primary"
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={formData.oteMin}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/[^0-9]/g, "");
+                        handleInputChange("oteMin", v);
+                      }}
+                      placeholder="45,000"
+                      className="w-full rounded-xl border border-gray-200 p-3 pl-7 text-sm outline-none transition-colors focus:border-brand-primary"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      OTE Max ($)
+                      OTE Max
                   </label>
-                  <input
-                    type="number"
-                    value={formData.oteMax}
-                    onChange={(e) => handleInputChange("oteMax", e.target.value)}
-                    placeholder="60000"
-                    className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition-colors focus:border-brand-primary"
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={formData.oteMax}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/[^0-9]/g, "");
+                        handleInputChange("oteMax", v);
+                      }}
+                      placeholder="60,000"
+                      className="w-full rounded-xl border border-gray-200 p-3 pl-7 text-sm outline-none transition-colors focus:border-brand-primary"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      Revenue ($)
+                      Revenue
                   </label>
-                  <input
-                    type="number"
-                    value={formData.revenue}
-                    onChange={(e) => handleInputChange("revenue", e.target.value)}
-                    placeholder="1000000"
-                    className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition-colors focus:border-brand-primary"
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={formData.revenue}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/[^0-9]/g, "");
+                        handleInputChange("revenue", v);
+                      }}
+                      placeholder="1,000,000"
+                      className="w-full rounded-xl border border-gray-200 p-3 pl-7 text-sm outline-none transition-colors focus:border-brand-primary"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -314,22 +357,15 @@ export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
               {/* Description */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                    Job Description *
+                    Job Description
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => handleInputChange("description", e.target.value)}
                   placeholder="Describe the job responsibilities..."
                   rows={4}
-                  className={`w-full rounded-xl border p-3 text-sm outline-none transition-colors resize-none ${
-                    errors.description
-                      ? "border-red-300 focus:border-red-500"
-                      : "border-gray-200 focus:border-brand-primary"
-                  }`}
+                  className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition-colors resize-none focus:border-brand-primary"
                 />
-                {errors.description && (
-                  <p className="mt-1 text-xs text-red-500">{errors.description}</p>
-                )}
               </div>
 
               {/* Requirements */}

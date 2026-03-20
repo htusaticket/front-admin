@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { useModalLock } from "@/hooks/useModalLock";
 import { useAuthStore } from "@/store/auth";
 import { useUsersStore } from "@/store/users";
-import type { AdminUserDetail, UserRole, UserPlan } from "@/types/admin";
+import type { AdminUserDetail, UserRole } from "@/types/admin";
 
 interface EditUserModalProps {
   isOpen: boolean;
@@ -29,9 +29,6 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
     city: user?.city || "",
     country: user?.country || "",
     role: (user?.role || "USER") as UserRole,
-    plan: (user?.plan || "") as UserPlan | "",
-    startDate: user?.startDate ? user.startDate.split("T")[0] : "",
-    endDate: user?.endDate ? user.endDate.split("T")[0] : "",
   });
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -47,9 +44,6 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
         city: user.city || "",
         country: user.country || "",
         role: user.role || "USER",
-        plan: user.plan || "",
-        startDate: user.startDate ? user.startDate.split("T")[0] : "",
-        endDate: user.endDate ? user.endDate.split("T")[0] : "",
       });
     }
   }, [user]);
@@ -66,9 +60,6 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
       city: formData.city || undefined,
       country: formData.country || undefined,
       role: formData.role,
-      plan: formData.plan || undefined,
-      startDate: formData.startDate || undefined,
-      endDate: formData.endDate || undefined,
     };
 
     // Only SUPERADMIN can change email
@@ -228,7 +219,7 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div>
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-gray-700">
                       Role
@@ -245,57 +236,7 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
                     <option value="JOB_UPLOADER">Job Uploader</option>
                   </select>
                 </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                      Plan
-                  </label>
-                  <select
-                    value={formData.plan}
-                    onChange={(e) =>
-                      setFormData({ ...formData, plan: e.target.value as UserPlan | "" })
-                    }
-                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20 bg-white"
-                  >
-                    <option value="">No Plan</option>
-                    <option value="PRO">PRO</option>
-                    <option value="ELITE">ELITE</option>
-                    <option value="LEVEL_UP">LEVEL UP</option>
-                    <option value="HIRING_HUB">HIRING HUB</option>
-                    <option value="SKILL_BUILDER">SKILL BUILDER</option>
-                  </select>
-                </div>
               </div>
-
-              {formData.plan && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                        Start Date
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.startDate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, startDate: e.target.value })
-                      }
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                        End Date
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.endDate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, endDate: e.target.value })
-                      }
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
-                    />
-                  </div>
-                </div>
-              )}
 
               <div className="flex justify-end gap-3 pt-4">
                 <button
