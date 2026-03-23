@@ -326,6 +326,8 @@ export interface AdminSubmission {
   submittedAt: string;
   feedback: string | null;
   score: number | null;
+  answers?: { questionId: number; selectedOption: number }[] | null;
+  questions?: { id: number; text: string; options: string[]; correctAnswer: number }[] | null;
 }
 
 // Query params for submissions list

@@ -61,7 +61,7 @@ export function ApproveRejectModal({
     const result = await approveRegistration(userId, {
       plan: selectedPlan,
       startDate,
-      endDate: endDate || undefined,
+      endDate: endDate || "2099-12-31",
     });
     setIsSubmitting(false);
 
