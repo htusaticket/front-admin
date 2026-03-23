@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Play, Pause, ThumbsUp, AlertTriangle, Loader2 } from "lucide-react";
+import { X, Send, Play, Pause, ThumbsUp, AlertTriangle, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 import { useModalLock } from "@/hooks/useModalLock";
@@ -211,11 +211,71 @@ export function ReviewSubmissionModal({ isOpen, onClose, submission }: ReviewSub
                 </div>
               )}
 
-              {/* Quiz submission - no preview needed */}
-              {submission.challengeType === "MULTIPLE_CHOICE" && (
+              {/* Quiz submission - show questions and answers */}
+              {submission.challengeType === "MULTIPLE_CHOICE" && submission.questions && (
+                <div className="space-y-4">
+                  {submission.score !== null && (
+                    <div className={`rounded-xl p-4 border ${
+                      submission.score >= 70 
+                        ? "bg-green-50 border-green-200" 
+                        : "bg-amber-50 border-amber-200"
+                    }`}>
+                      <h3 className="text-xs font-bold uppercase tracking-wider mb-1 text-gray-500">Quiz Score</h3>
+                      <p className={`text-2xl font-bold ${submission.score >= 70 ? "text-green-700" : "text-amber-700"}`}>
+                        {submission.score}%
+                        <span className="text-sm font-normal ml-2">
+                          {submission.score >= 70 ? "Passed" : "Needs Improvement"}
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                  {submission.questions.map((question, qIdx) => {
+                    const userAnswer = submission.answers?.find(
+                      (a: { questionId: number; selectedOption: number }) => a.questionId === question.id,
+                    );
+                    const isCorrect = userAnswer?.selectedOption === question.correctAnswer;
+                    return (
+                      <div key={question.id || qIdx} className="rounded-xl border border-gray-200 p-4 space-y-2">
+                        <div className="flex items-start gap-2">
+                          {userAnswer ? (
+                            isCorrect ? (
+                              <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+                            ) : (
+                              <XCircle className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
+                            )
+                          ) : (
+                            <span className="h-5 w-5 rounded-full border-2 border-gray-300 mt-0.5 shrink-0 inline-block" />
+                          )}
+                          <p className="font-semibold text-gray-900 text-sm">{qIdx + 1}. {question.text}</p>
+                        </div>
+                        <div className="ml-7 space-y-1">
+                          {question.options.map((opt: string, optIdx: number) => {
+                            const isUserChoice = userAnswer?.selectedOption === optIdx;
+                            const isCorrectOption = question.correctAnswer === optIdx;
+                            let optClass = "bg-white border-gray-200 text-gray-700";
+                            if (isCorrectOption) optClass = "bg-green-50 border-green-300 text-green-800";
+                            if (isUserChoice && !isCorrect) optClass = "bg-red-50 border-red-300 text-red-800";
+                            return (
+                              <div key={`q${question.id}-${opt}`} className={`rounded-lg border px-3 py-1.5 text-sm ${optClass}`}>
+                                {isUserChoice && "→ "}{opt}
+                                {isCorrectOption && <span className="ml-1 text-xs font-bold">(correct)</span>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Quiz submission without questions data */}
+              {submission.challengeType === "MULTIPLE_CHOICE" && !submission.questions && (
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Quiz Submission</h3>
-                  <p className="text-sm text-gray-600">This is a quiz challenge submission. Review the student&apos;s answers.</p>
+                  <p className="text-sm text-gray-600">
+                    {submission.score !== null ? `Score: ${submission.score}%` : "Quiz data not available."}
+                  </p>
                 </div>
               )}
 

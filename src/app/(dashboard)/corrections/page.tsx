@@ -166,7 +166,8 @@ export default function CorrectionsPage() {
                 key={submission.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center justify-between bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all"
+                onClick={() => handleReviewClick(submission)}
+                className="flex items-center justify-between bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-6">
                   {/* Avatar */}

@@ -33,12 +33,12 @@ const STATUS_OPTIONS = [
 ];
 
 const formatSalary = (job: JobOffer): string => {
-  if (job.salaryRange) return job.salaryRange;
   if (job.oteMin && job.oteMax) {
     return `$${job.oteMin.toLocaleString()} - $${job.oteMax.toLocaleString()}`;
   }
   if (job.oteMin) return `$${job.oteMin.toLocaleString()}`;
   if (job.oteMax) return `$${job.oteMax.toLocaleString()}`;
+  if (job.salaryRange) return job.salaryRange.replace(/\$+/g, "$");
   return "No especificado";
 };
 
