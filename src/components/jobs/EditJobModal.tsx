@@ -45,6 +45,7 @@ export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
     description: "",
     isActive: true,
     social: "",
+    recruiterSocial: "",
     website: "",
     email: "",
   });
@@ -66,6 +67,7 @@ export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
         description: job.description || "",
         isActive: job.isActive ?? true,
         social: job.social || "",
+        recruiterSocial: job.recruiterSocial || "",
         website: job.website || "",
         email: job.email || "",
       });
@@ -130,6 +132,7 @@ export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
       requirements: requirements.map((r) => r.value).filter((r) => r.trim()),
       isActive: formData.isActive,
       social: formData.social.trim() || undefined,
+      recruiterSocial: formData.recruiterSocial.trim() || undefined,
       website: formData.website.trim() || undefined,
       email: formData.email.trim() || undefined,
     };
@@ -219,8 +222,8 @@ export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
                 )}
               </div>
 
-              {/* Social / Website / Email */}
-              <div className="grid grid-cols-3 gap-4">
+              {/* Social / Recruiter Social / Website / Email */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                       Social Link
@@ -233,6 +236,20 @@ export function EditJobModal({ isOpen, onClose, job }: EditJobModalProps) {
                     className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition-colors focus:border-brand-primary"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      Recruiter Social
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.recruiterSocial}
+                    onChange={(e) => handleInputChange("recruiterSocial", e.target.value)}
+                    placeholder="Recruiter Instagram / LinkedIn"
+                    className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition-colors focus:border-brand-primary"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                       Website

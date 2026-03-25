@@ -30,6 +30,7 @@ export interface JobOffer {
   isActive: boolean;
   applicationsCount: number;
   social?: string | null;
+  recruiterSocial?: string | null;
   website?: string | null;
   email?: string | null;
   createdAt: string;
@@ -57,6 +58,7 @@ export interface CreateJobData {
   requirements?: string[];
   isActive?: boolean;
   social?: string;
+  recruiterSocial?: string;
   website?: string;
   email?: string;
 }

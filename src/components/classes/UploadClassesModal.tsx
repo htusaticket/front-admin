@@ -87,6 +87,30 @@ export function UploadClassesModal({ isOpen, onClose }: UploadClassesModalProps)
           return;
         }
 
+        // Validate that no classes are in the past
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const pastClasses = valid.filter(c => {
+          let isoDate = c.date;
+          const slashParts = c.date.split("/");
+          const dashParts = c.date.split("-");
+          if (slashParts.length === 3) {
+            const [a, b, cc] = slashParts;
+            if (cc.length === 4) isoDate = `${cc}-${a.padStart(2, "0")}-${b.padStart(2, "0")}`;
+          } else if (dashParts.length === 3 && dashParts[0].length !== 4) {
+            const [a, b, cc] = dashParts;
+            if (cc.length === 4) isoDate = `${cc}-${b.padStart(2, "0")}-${a.padStart(2, "0")}`;
+          }
+          const classDate = new Date(isoDate + "T00:00:00");
+          return classDate < today;
+        });
+
+        if (pastClasses.length > 0) {
+          const pastTitles = pastClasses.slice(0, 3).map(c => `"${c.title}" (${c.date})`).join(", ");
+          setError(`Cannot upload classes with past dates. ${pastClasses.length} class(es) have past dates: ${pastTitles}${pastClasses.length > 3 ? "..." : ""}`);
+          return;
+        }
+
         setParsedClasses(valid);
       } catch (err) {
         console.error(err);

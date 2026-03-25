@@ -216,7 +216,8 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
         oteMax,
         revenue,
         requirements: [],
-        social: job.social || job.recruiterSocial || undefined,
+        social: job.social || undefined,
+        recruiterSocial: job.recruiterSocial || undefined,
         website: job.website || undefined,
         email: job.email || undefined,
       };
@@ -327,6 +328,7 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
                           <span>Role: {job.hiring || "-"}</span>
                           <span>OTE: {job.ote || job.closerOte || job.setterOte || "-"}</span>
                           {job.social && <span className="truncate">Social: {job.social}</span>}
+                          {job.recruiterSocial && <span className="truncate">Recruiter: {job.recruiterSocial}</span>}
                           {job.website && <span className="truncate">Web: {job.website}</span>}
                         </div>
                       </div>
