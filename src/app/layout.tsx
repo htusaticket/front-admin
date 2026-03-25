@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   title: "High Ticket USA Admin",
   description: "Admin panel for High Ticket USA platform",
   icons: {
-    icon: "https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png",
+    icon: "/HT_USA_Logo-lau.png",
   },
 };
 

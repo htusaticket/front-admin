@@ -34,10 +34,29 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".pptx"];
+  const ALLOWED_MIME_TYPES = [
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  ];
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setAttachedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+      const files = Array.from(e.target.files);
+      const invalid = files.filter(f => {
+        const ext = f.name.slice(f.name.lastIndexOf(".")).toLowerCase();
+        return !ALLOWED_EXTENSIONS.includes(ext) && !ALLOWED_MIME_TYPES.includes(f.type);
+      });
+      if (invalid.length > 0) {
+        setFormError(`Only PDF, DOCX and PPTX files are allowed. Rejected: ${invalid.map(f => f.name).join(", ")}`);
+        e.target.value = "";
+        return;
+      }
+      setFormError(null);
+      setAttachedFiles(prev => [...prev, ...files]);
     }
+    e.target.value = "";
   };
 
   const removeFile = (index: number) => {
@@ -310,6 +329,7 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
                     <input 
                       type="file" 
                       multiple 
+                      accept=".pdf,.docx,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"
                       className="hidden" 
                       ref={fileInputRef} 
                       onChange={handleFileChange}

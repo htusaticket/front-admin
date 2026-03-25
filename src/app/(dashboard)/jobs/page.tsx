@@ -3,7 +3,6 @@
 import { motion } from "framer-motion";
 import {
   Briefcase,
-  DollarSign,
   Building,
   Search,
   CheckCircle,
@@ -330,6 +329,18 @@ export default function JobsPage() {
                         Social
                       </a>
                     )}
+                    {job.recruiterSocial && (
+                      <a
+                        href={job.recruiterSocial.startsWith("http") ? job.recruiterSocial : `https://${job.recruiterSocial}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-2 text-purple-600 hover:underline"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Recruiter
+                      </a>
+                    )}
                     {job.website && (
                       <a
                         href={job.website.startsWith("http") ? job.website : `https://${job.website}`}
@@ -343,7 +354,6 @@ export default function JobsPage() {
                       </a>
                     )}
                     <div className="flex items-center gap-2">
-                      <DollarSign className="h-3.5 w-3.5 shrink-0" />
                       <span className="line-clamp-1">{formatSalary(job)}</span>
                     </div>
                   </div>
@@ -389,7 +399,6 @@ export default function JobsPage() {
 
                     <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                       <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-gray-400" />
                         <span>{formatSalary(selectedJob)}</span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -405,6 +414,17 @@ export default function JobsPage() {
                         >
                           <ExternalLink className="h-4 w-4" />
                           <span>Social</span>
+                        </a>
+                      )}
+                      {selectedJob.recruiterSocial && (
+                        <a
+                          href={selectedJob.recruiterSocial.startsWith("http") ? selectedJob.recruiterSocial : `https://${selectedJob.recruiterSocial}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-purple-600 hover:underline"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          <span>Recruiter Social</span>
                         </a>
                       )}
                       {selectedJob.website && (
