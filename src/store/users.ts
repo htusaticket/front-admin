@@ -50,6 +50,7 @@ interface UsersActions {
     data: RejectRegistrationPayload,
   ) => Promise<{ success: boolean; message?: string }>;
   activateUser: (userId: string, data: ActivateUserPayload) => Promise<{ success: boolean; message?: string }>;
+  deleteUser: (userId: string) => Promise<{ success: boolean; message?: string }>;
   clearError: () => void;
   clearSelectedUser: () => void;
   reset: () => void;
@@ -430,6 +431,30 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
       if (get().selectedUser?.id === userId) {
         await get().fetchUserDetails(userId);
       }
+      
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      set({ error: errorMessage, isLoading: false });
+      return { success: false, message: errorMessage };
+    }
+  },
+
+  deleteUser: async (userId: string) => {
+    set({ isLoading: true, error: null });
+    
+    try {
+      const response = await api.delete<ApiResponse<{ message: string }>>(
+        `/api/admin/users/${userId}`,
+      );
+      
+      // Remove user from local list
+      set(state => ({
+        users: state.users.filter(u => u.id !== userId),
+        selectedUser: state.selectedUser?.id === userId ? null : state.selectedUser,
+        total: state.total - 1,
+        isLoading: false,
+      }));
       
       return { success: true, message: response.data.message };
     } catch (error) {

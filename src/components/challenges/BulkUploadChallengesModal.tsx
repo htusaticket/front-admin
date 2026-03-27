@@ -46,24 +46,36 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
     // Handle Excel serial date numbers (e.g. 46099)
     if (typeof raw === "number" || (!isNaN(Number(raw)) && /^\d{4,5}(\.\d+)?$/.test(String(raw)))) {
       const serial = typeof raw === "number" ? raw : Number(raw);
-      const excelEpoch = new Date(1899, 11, 30);
-      const d = new Date(excelEpoch.getTime() + serial * 86400000);
+      const d = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
       return d.toISOString().split("T")[0];
     }
     const str = String(raw).trim();
     // Already YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
-    // DD-MM-YYYY or DD/MM/YYYY
-    const match = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
-    if (match) {
-      const [, day, month, year] = match;
-      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    // Handle slash formats: M/D/YYYY or M/D (US format from Excel)
+    const slashMatch = str.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+    if (slashMatch) {
+      const [, a, b, c] = slashMatch;
+      let year: string;
+      if (c) {
+        year = c.length === 2 ? `20${c}` : c;
+      } else {
+        year = String(new Date().getFullYear());
+      }
+      // Treat as MM/DD/YYYY (US format, which is what Excel uses)
+      return `${year}-${a!.padStart(2, "0")}-${b!.padStart(2, "0")}`;
+    }
+    // DD-MM-YYYY
+    const dashMatch = str.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    if (dashMatch) {
+      const [, day, month, year] = dashMatch;
+      return `${year}-${month!.padStart(2, "0")}-${day!.padStart(2, "0")}`;
     }
     // YYYY/MM/DD
     const match2 = str.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
     if (match2) {
       const [, year, month, day] = match2;
-      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+      return `${year}-${month!.padStart(2, "0")}-${day!.padStart(2, "0")}`;
     }
     return str;
   };
@@ -109,7 +121,7 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
         const worksheet = workbook.Sheets[sheetName];
         
         type ExcelRow = Record<string, string | number | undefined>;
-        const jsonData = XLSX.utils.sheet_to_json(worksheet) as ExcelRow[];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { raw: true }) as ExcelRow[];
 
         if (jsonData.length === 0) {
           setError("El archivo Excel está vacío.");
@@ -406,8 +418,8 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {parsedChallenges.map((c) => (
-                          <tr key={`${c.date}-${c.title}`} className="hover:bg-gray-50/50">
+                        {parsedChallenges.map((c, cIdx) => (
+                          <tr key={`challenge-${cIdx}-${c.date}`} className="hover:bg-gray-50/50">
                             <td className="px-4 py-2 font-medium text-gray-900">{c.date}</td>
                             <td className="px-4 py-2">
                               <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
@@ -422,7 +434,7 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
                                 ? (
                                   <div className="space-y-1">
                                     {c.questions?.map((q, qIdx) => (
-                                      <div key={q.text || `q-${qIdx}`} className="flex gap-2">
+                                      <div key={`q-${cIdx}-${qIdx}`} className="flex gap-2">
                                         <span className="font-medium">Q{qIdx+1}:</span> {q.text} 
                                         <span className="text-gray-400">({q.options.length} opts)</span>
                                       </div>

@@ -3,6 +3,7 @@
 import Cookies from "js-cookie";
 import { Search, SlidersHorizontal, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 
 import { Pagination } from "@/components/ui/Pagination";
@@ -63,6 +64,10 @@ const getPlanBadge = (plan: UserPlan | null) => {
 };
 
 export default function UsersPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialPage = Number(searchParams.get("page")) || 1;
+
   const { 
     users, 
     total, 
@@ -100,9 +105,10 @@ export default function UsersPage() {
     [fetchUsers],
   );
 
-  // Initial load
+  // Initial load - use page from URL if returning from user detail
   useEffect(() => {
-    fetchUsers({ page: 1, limit: itemsPerPage });
+    fetchUsers({ page: initialPage, limit: itemsPerPage });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchUsers]);
 
   // Refetch when filters change
@@ -228,7 +234,7 @@ export default function UsersPage() {
                   users.map((user) => (
                     <tr 
                       key={user.id}
-                      onClick={() => window.location.href = `/users/${user.id}`} 
+                      onClick={() => router.push(`/users/${user.id}?fromPage=${page}`)} 
                       className="group cursor-pointer transition-colors hover:bg-gray-50"
                     >
                       <td className="whitespace-nowrap px-6 py-4">
@@ -284,7 +290,7 @@ export default function UsersPage() {
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                         <Link 
-                          href={`/users/${user.id}`} 
+                          href={`/users/${user.id}?fromPage=${page}`} 
                           onClick={(e) => e.stopPropagation()}
                           className="text-brand-primary hover:text-brand-primary/80 font-bold"
                         >

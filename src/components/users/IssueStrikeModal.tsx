@@ -23,10 +23,10 @@ export function IssueStrikeModal({ isOpen, onClose, userId, userName }: IssueStr
   const { issueStrike } = useUsersStore();
   const { config, fetchConfig } = useSystemConfigStore();
 
-  // Fetch config to get maxStrikesForPunishment
+  // Fetch config to get maxStrikesForPunishment (only when modal is open)
   useEffect(() => {
-    if (!config) fetchConfig();
-  }, [config, fetchConfig]);
+    if (isOpen && !config) fetchConfig();
+  }, [isOpen, config, fetchConfig]);
 
   // Clear error and reason when modal opens (adjusting state during rendering)
   const [prevIsOpen, setPrevIsOpen] = useState(false);
