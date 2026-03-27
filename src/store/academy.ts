@@ -20,6 +20,7 @@ export interface Lesson {
   duration: string;
   contentUrl?: string;
   order: number;
+  status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   moduleId: number;
   resources: LessonResource[];
   createdAt?: string;
@@ -33,6 +34,7 @@ export interface Module {
   order: number;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   visibleForSkillBuilder: boolean;
+  visibleForSkillBuilderLive: boolean;
   lessonsCount: number;
   createdAt: string;
   updatedAt: string;
@@ -54,6 +56,7 @@ export interface CreateModuleData {
   order?: number;
   status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   visibleForSkillBuilder?: boolean;
+  visibleForSkillBuilderLive?: boolean;
 }
 
 export interface CreateLessonData {
@@ -62,6 +65,7 @@ export interface CreateLessonData {
   duration: string;
   contentUrl?: string;
   order?: number;
+  status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
 }
 
 export interface CreateResourceData {

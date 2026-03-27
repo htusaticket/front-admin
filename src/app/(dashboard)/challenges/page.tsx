@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Plus, Upload, Mic, HelpCircle, Calendar, Circle, Loader2, AlertCircle, Trash2 } from "lucide-react";
+import { Plus, Upload, Mic, HelpCircle, Calendar, Circle, Loader2, AlertCircle, Trash2, Eye, EyeOff } from "lucide-react";
 import { useState, useEffect } from "react";
 
 import { BulkUploadChallengesModal } from "@/components/challenges/BulkUploadChallengesModal";
@@ -17,7 +17,8 @@ export default function ChallengesPage() {
     isSaving, 
     error, 
     fetchChallenges, 
-    deleteChallenge, 
+    deleteChallenge,
+    updateChallenge,
   } = useChallengesStore();
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -49,6 +50,16 @@ export default function ChallengesPage() {
   const getChallengeForDate = (date: string) => 
     challenges.find(c => c.scheduledDate === date);
   
+  const handleToggleSBLive = async (challenge: Challenge) => {
+    const newValue = !challenge.visibleForSkillBuilderLive;
+    await updateChallenge(challenge.id, { visibleForSkillBuilderLive: newValue });
+  };
+
+  const handleToggleSB = async (challenge: Challenge) => {
+    const newValue = !challenge.visibleForSkillBuilder;
+    await updateChallenge(challenge.id, { visibleForSkillBuilder: newValue });
+  };
+
   const handleDeleteChallenge = async (challenge: Challenge) => {
     if (!isSuperAdmin) return;
     
@@ -139,6 +150,15 @@ export default function ChallengesPage() {
                     <span className="text-[10px] font-medium text-gray-600 truncate w-full text-center px-1">
                       {challenge.type === "AUDIO" ? "Audio" : "Quiz"}
                     </span>
+                    {/* SB Live visibility indicators */}
+                    <div className="flex gap-0.5">
+                      {challenge.visibleForSkillBuilder && (
+                        <span className="rounded bg-orange-100 px-1 text-[8px] font-bold text-orange-600">SB</span>
+                      )}
+                      {challenge.visibleForSkillBuilderLive && (
+                        <span className="rounded bg-cyan-100 px-1 text-[8px] font-bold text-cyan-600">Live</span>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center text-gray-400">
@@ -183,7 +203,36 @@ export default function ChallengesPage() {
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-4">
+                {/* Visibility Badges */}
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleToggleSB(challenge)}
+                    disabled={isSaving}
+                    title={challenge.visibleForSkillBuilder ? "Visible for Skill Builder — click to hide" : "Hidden from Skill Builder — click to show"}
+                    className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold transition-all disabled:opacity-50 ${
+                      challenge.visibleForSkillBuilder
+                        ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                        : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+                    }`}
+                  >
+                    {challenge.visibleForSkillBuilder ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                    SB
+                  </button>
+                  <button
+                    onClick={() => handleToggleSBLive(challenge)}
+                    disabled={isSaving}
+                    title={challenge.visibleForSkillBuilderLive ? "Visible for SB Live — click to hide" : "Hidden from SB Live — click to show"}
+                    className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold transition-all disabled:opacity-50 ${
+                      challenge.visibleForSkillBuilderLive
+                        ? "bg-cyan-100 text-cyan-700 hover:bg-cyan-200"
+                        : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+                    }`}
+                  >
+                    {challenge.visibleForSkillBuilderLive ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                    SB Live
+                  </button>
+                </div>
                 <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-100 rounded-md px-2 py-1">
                   <Calendar className="h-3.5 w-3.5" />
                   {challenge.scheduledDate}

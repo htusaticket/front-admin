@@ -59,6 +59,7 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
     imageUrl: "",
     pdfFiles: [] as File[],
     visibleForSkillBuilder: false,
+    visibleForSkillBuilderLive: false,
   });
   const [imagePreviewError, setImagePreviewError] = useState(false);
 
@@ -74,6 +75,7 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
         imageUrl: initialData.image || "",
         pdfFiles: [],
         visibleForSkillBuilder: initialData.visibleForSkillBuilder || false,
+        visibleForSkillBuilderLive: initialData.visibleForSkillBuilderLive || false,
       });
       setImagePreviewError(false);
     } else if (isOpen && !initialData) {
@@ -87,6 +89,7 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
         imageUrl: "",
         pdfFiles: [],
         visibleForSkillBuilder: false,
+        visibleForSkillBuilderLive: false,
       });
       setImagePreviewError(false);
     }
@@ -113,12 +116,14 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
       title: string;
       description: string;
       visibleForSkillBuilder: boolean;
+      visibleForSkillBuilderLive: boolean;
       status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
       image?: string;
     } = {
       title: formData.title,
       description: formData.description,
       visibleForSkillBuilder: formData.visibleForSkillBuilder,
+      visibleForSkillBuilderLive: formData.visibleForSkillBuilderLive,
       status: formData.status,
     };
     
@@ -256,7 +261,7 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
                 </div>
 
                 {/* Skill Builder Visibility */}
-                <div className="rounded-xl border border-gray-200 p-4 bg-gray-50">
+                <div className="rounded-xl border border-gray-200 p-4 bg-gray-50 space-y-3">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -270,6 +275,22 @@ export function AddModuleModal({ isOpen, onClose, initialData }: AddModuleModalP
                       <span className="font-semibold text-gray-900">Visible for Skill Builder</span>
                       <p className="text-xs text-gray-500 mt-0.5">
                           Enable this to make the module accessible for users with the Skill Builder plan.
+                      </p>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.visibleForSkillBuilderLive}
+                      onChange={(e) =>
+                        setFormData({ ...formData, visibleForSkillBuilderLive: e.target.checked })
+                      }
+                      className="h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500/20"
+                    />
+                    <div>
+                      <span className="font-semibold text-gray-900">Visible for Skill Builder Live</span>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                          Enable this to make the module accessible for users with the Skill Builder Live plan.
                       </p>
                     </div>
                   </label>

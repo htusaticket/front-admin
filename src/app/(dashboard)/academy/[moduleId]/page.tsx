@@ -224,6 +224,11 @@ export default function ModuleDetailPage() {
                   Skill Builder
                 </span>
               )}
+              {selectedModule.visibleForSkillBuilderLive && (
+                <span className="flex items-center gap-1 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-700">
+                  SB Live
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -370,6 +375,16 @@ function SortableLessonRow({
             <h4 className="font-semibold text-gray-900 truncate">
               {lesson.title}
             </h4>
+            {lesson.status === "DRAFT" && (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                Draft
+              </span>
+            )}
+            {lesson.status === "ARCHIVED" && (
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-500">
+                Archived
+              </span>
+            )}
             {lesson.contentUrl && (
               <span className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
                 <Video className="h-3 w-3" />
@@ -387,7 +402,7 @@ function SortableLessonRow({
           <div className="flex items-center gap-4 mt-2">
             <span className="flex items-center gap-1 text-xs text-gray-500">
               <Clock className="h-3 w-3" />
-              {lesson.duration}
+              {lesson.duration}{!lesson.duration?.toString().includes("min") && " min"}
             </span>
             
             {lesson.resources && lesson.resources.length > 0 && (

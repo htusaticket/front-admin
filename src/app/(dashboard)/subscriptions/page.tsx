@@ -34,6 +34,7 @@ const PLAN_OPTIONS: { value: UserPlan; label: string; description: string }[] = 
   { value: "LEVEL_UP", label: "Level Up", description: "Full access to all features" },
   { value: "HIRING_HUB", label: "Hiring Hub", description: "Content + Job Board (no live classes)" },
   { value: "SKILL_BUILDER", label: "Skill Builder", description: "Content only" },
+  { value: "SKILL_BUILDER_LIVE", label: "Skill Builder Live", description: "Content + Live classes" },
 ];
 
 // Status badge component
@@ -59,6 +60,7 @@ const PlanBadge = ({ plan }: { plan: UserPlan }) => {
     LEVEL_UP: "bg-blue-100 text-blue-700",
     HIRING_HUB: "bg-cyan-100 text-cyan-700",
     SKILL_BUILDER: "bg-gray-100 text-gray-700",
+    SKILL_BUILDER_LIVE: "bg-teal-100 text-teal-700",
   };
 
   return (

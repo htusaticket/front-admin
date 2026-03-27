@@ -475,7 +475,7 @@ export default function UserDetailPage() {
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats
-          .filter((stat) => {
+          .filter((_stat) => {
             // Hide class-attendance, strikes, and jobs stats for non-student roles
             const nonStudentRoles = ["JOB_UPLOADER", "ADMIN", "SUPERADMIN"];
             if (user.role && nonStudentRoles.includes(user.role)) {
@@ -508,10 +508,10 @@ export default function UserDetailPage() {
             { id: "strikes", label: "Strikes", icon: AlertTriangle },
           ]
             .filter((tab) => {
-              // Hide classes and strikes tabs for non-student roles
+              // Hide academy, classes and strikes tabs for non-student roles
               const nonStudentRoles = ["JOB_UPLOADER", "ADMIN", "SUPERADMIN"];
               if (user.role && nonStudentRoles.includes(user.role)) {
-                return tab.id !== "classes" && tab.id !== "strikes";
+                return tab.id !== "academy" && tab.id !== "classes" && tab.id !== "strikes";
               }
               return true;
             })
@@ -890,7 +890,9 @@ export default function UserDetailPage() {
               <div className="rounded-xl border-2 border-red-200 bg-red-50 p-4">
                 <p className="text-sm font-bold text-red-800 mb-1">⚠️ This action is irreversible</p>
                 <p className="text-xs text-red-700">
-                  All data associated with this user will be permanently removed, including enrollments, strikes, academy progress, and any other related records.
+                  All data associated with this user will be permanently removed,
+                  including enrollments, strikes, academy progress, and any
+                  other related records.
                 </p>
               </div>
               <div className="mt-6 flex gap-3">
