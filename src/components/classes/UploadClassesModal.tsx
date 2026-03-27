@@ -105,6 +105,7 @@ export function UploadClassesModal({ isOpen, onClose }: UploadClassesModalProps)
   const [file, setFile] = useState<File | null>(null);
   const [parsedClasses, setParsedClasses] = useState<ParsedClass[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [visibleForSkillBuilderLive, setVisibleForSkillBuilderLive] = useState(false);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -170,7 +171,7 @@ export function UploadClassesModal({ isOpen, onClose }: UploadClassesModalProps)
         today.setHours(0, 0, 0, 0);
         const pastClasses = valid.filter(c => {
           // Date is already normalized to YYYY-MM-DD by normalizeDate()
-          const classDate = new Date(c.date + "T00:00:00");
+          const classDate = new Date(`${c.date}T00:00:00`);
           return classDate < today;
         });
 
@@ -211,6 +212,7 @@ export function UploadClassesModal({ isOpen, onClose }: UploadClassesModalProps)
         capacityMax: cls.capacity ? parseInt(cls.capacity, 10) : undefined,
         description: cls.description || undefined,
         materialsLink: cls.materialsLink || undefined,
+        visibleForSkillBuilderLive,
       };
     });
 
@@ -227,6 +229,7 @@ export function UploadClassesModal({ isOpen, onClose }: UploadClassesModalProps)
     setFile(null);
     setParsedClasses([]);
     setError(null);
+    setVisibleForSkillBuilderLive(false);
     onClose();
   };
 
@@ -346,6 +349,22 @@ export function UploadClassesModal({ isOpen, onClose }: UploadClassesModalProps)
                 </div>
               )}
             </div>
+
+            {/* Skill Builder Live Visibility */}
+            {parsedClasses.length > 0 && (
+              <div className="mx-6 flex items-center gap-3 rounded-lg border border-gray-200 p-3">
+                <input
+                  type="checkbox"
+                  id="bulkClassVisibleForSkillBuilderLive"
+                  checked={visibleForSkillBuilderLive}
+                  onChange={(e) => setVisibleForSkillBuilderLive(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                />
+                <label htmlFor="bulkClassVisibleForSkillBuilderLive" className="text-sm font-medium text-gray-700">
+                  Visible for Skill Builder Live
+                </label>
+              </div>
+            )}
 
             {/* Footer */}
             <div className="flex items-center justify-between border-t border-gray-100 px-6 py-4">

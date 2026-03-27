@@ -59,6 +59,10 @@ function convertToEmbedUrl(url: string): string | null {
   // Vimeo: already player format
   if (trimmed.includes("player.vimeo.com/video/")) return trimmed;
 
+  // Loom: loom.com/share/xxx -> loom.com/embed/xxx
+  const loomMatch = trimmed.match(/loom\.com\/(?:share|embed)\/([a-zA-Z0-9]+)/);
+  if (loomMatch?.[1]) return `https://www.loom.com/embed/${loomMatch[1]}`;
+
   // Other URLs: return as-is only if valid
   return trimmed;
 }
@@ -83,6 +87,7 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
     duration: "",
     contentUrl: "",
     order: 0,
+    status: "PUBLISHED" as "DRAFT" | "PUBLISHED" | "ARCHIVED",
   });
 
   const [existingResources, setExistingResources] = useState<LessonResource[]>([]);
@@ -109,6 +114,7 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
         duration: initialData.duration || "",
         contentUrl: initialData.contentUrl || "",
         order: initialData.order || 1,
+        status: initialData.status || "PUBLISHED",
       });
       setExistingResources(initialData.resources || []);
     } else if (isOpen && !initialData) {
@@ -118,6 +124,7 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
         duration: "",
         contentUrl: "",
         order: getNextOrder(),
+        status: "PUBLISHED",
       });
       setExistingResources([]);
     }
@@ -144,6 +151,7 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
       duration: formData.duration,
       contentUrl: formData.contentUrl || undefined,
       order: initialData ? formData.order : finalOrder,
+      status: formData.status,
     };
     
     if (initialData) {
@@ -397,6 +405,24 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
                         </p>
                       )}
                     </div>
+                  </div>
+
+                  {/* Status */}
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                      Status
+                    </label>
+                    <select
+                      value={formData.status}
+                      onChange={(e) =>
+                        setFormData({ ...formData, status: e.target.value as "DRAFT" | "PUBLISHED" | "ARCHIVED" })
+                      }
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20 bg-white"
+                    >
+                      <option value="DRAFT">Draft</option>
+                      <option value="PUBLISHED">Published</option>
+                      <option value="ARCHIVED">Archived</option>
+                    </select>
                   </div>
                 </div>
 

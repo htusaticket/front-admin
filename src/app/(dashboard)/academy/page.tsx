@@ -345,6 +345,12 @@ function SortableModuleCard({
               Skill Builder
             </span>
           )}
+          {module.visibleForSkillBuilderLive && (
+            <span className="flex items-center gap-1 rounded-lg bg-teal-500 px-2 py-1 text-xs font-bold text-white">
+              <Eye className="h-3 w-3" />
+              SB Live
+            </span>
+          )}
         </div>
         
         <div className="absolute top-4 right-4 flex gap-2">

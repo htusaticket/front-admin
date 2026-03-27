@@ -1,7 +1,7 @@
 // ==================== ENUMS ====================
 export type UserRole = "SUPERADMIN" | "ADMIN" | "USER" | "JOB_UPLOADER";
 export type UserStatus = "PENDING" | "ACTIVE" | "SUSPENDED";
-export type UserPlan = "PRO" | "ELITE" | "LEVEL_UP" | "HIRING_HUB" | "SKILL_BUILDER";
+export type UserPlan = "PRO" | "ELITE" | "LEVEL_UP" | "HIRING_HUB" | "SKILL_BUILDER" | "SKILL_BUILDER_LIVE";
 export type SubscriptionStatus = "ACTIVE" | "EXPIRED" | "CANCELLED";
 export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 export type SubmissionStatus = "PENDING" | "APPROVED" | "NEEDS_IMPROVEMENT";
@@ -265,6 +265,7 @@ export interface AdminClass {
   meetLink: string | null;
   materialsLink: string | null;
   description: string | null;
+  visibleForSkillBuilderLive: boolean;
   createdAt: string;
 }
 
@@ -298,6 +299,7 @@ export interface CreateClassPayload {
   capacityMax?: number;
   description?: string;
   materialsLink?: string;
+  visibleForSkillBuilderLive?: boolean;
 }
 
 // Save attendance payload

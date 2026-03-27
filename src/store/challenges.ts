@@ -23,6 +23,7 @@ interface BackendChallenge {
   points: number;
   isActive: boolean;
   visibleForSkillBuilder: boolean;
+  visibleForSkillBuilderLive: boolean;
   submissionsCount: number;
   pendingSubmissions: number;
   createdAt: string;
@@ -41,6 +42,7 @@ export interface Challenge {
   points: number;
   isActive: boolean;
   visibleForSkillBuilder: boolean;
+  visibleForSkillBuilderLive: boolean;
   submissionsCount: number;
   pendingSubmissions: number;
   createdAt: string;
@@ -59,6 +61,7 @@ const transformChallenge = (backend: BackendChallenge): Challenge => ({
   points: backend.points,
   isActive: backend.isActive,
   visibleForSkillBuilder: backend.visibleForSkillBuilder,
+  visibleForSkillBuilderLive: backend.visibleForSkillBuilderLive,
   submissionsCount: backend.submissionsCount,
   pendingSubmissions: backend.pendingSubmissions,
   createdAt: backend.createdAt,
@@ -90,6 +93,7 @@ export interface CreateChallengeData {
   audioUrl?: string;
   points?: number;
   visibleForSkillBuilder?: boolean;
+  visibleForSkillBuilderLive?: boolean;
 }
 
 export interface BulkCreateChallengesResponse {
@@ -216,6 +220,7 @@ export const useChallengesStore = create<ChallengesStore>((set, get) => ({
         audioUrl: data.audioUrl,
         points: data.points,
         visibleForSkillBuilder: data.visibleForSkillBuilder,
+        visibleForSkillBuilderLive: data.visibleForSkillBuilderLive,
       };
       
       const response = await api.post<ApiResponse<Challenge>>(
@@ -255,7 +260,12 @@ export const useChallengesStore = create<ChallengesStore>((set, get) => ({
       }));
       if (data.audioUrl !== undefined) backendData.audioUrl = data.audioUrl;
       if (data.points !== undefined) backendData.points = data.points;
-      if (data.visibleForSkillBuilder !== undefined) backendData.visibleForSkillBuilder = data.visibleForSkillBuilder;
+      if (data.visibleForSkillBuilder !== undefined) {
+        backendData.visibleForSkillBuilder = data.visibleForSkillBuilder;
+      }
+      if (data.visibleForSkillBuilderLive !== undefined) {
+        backendData.visibleForSkillBuilderLive = data.visibleForSkillBuilderLive;
+      }
       if (data.isActive !== undefined) backendData.isActive = data.isActive;
       
       const response = await api.put<ApiResponse<Challenge>>(
@@ -342,6 +352,7 @@ export const useChallengesStore = create<ChallengesStore>((set, get) => ({
         audioUrl: data.audioUrl,
         points: data.points,
         visibleForSkillBuilder: data.visibleForSkillBuilder,
+        visibleForSkillBuilderLive: data.visibleForSkillBuilderLive,
       }));
       
       const response = await api.post<ApiResponse<BulkCreateChallengesResponse>>(

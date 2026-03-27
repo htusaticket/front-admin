@@ -47,6 +47,12 @@ const PLANS: { value: UserPlan; label: string; description: string; duration: st
     description: "Limited content selected by admin",
     duration: "1 month",
   },
+  { 
+    value: "SKILL_BUILDER_LIVE", 
+    label: "SKILL BUILDER LIVE", 
+    description: "Limited content + live classes",
+    duration: "1 month",
+  },
 ];
 
 export function ActivateUserModal({ 

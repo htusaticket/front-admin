@@ -23,6 +23,7 @@ const PLANS: { value: UserPlan; label: string; description: string }[] = [
   { value: "LEVEL_UP", label: "Level Up", description: "Full access to all features" },
   { value: "HIRING_HUB", label: "Hiring Hub", description: "Content + Job Board (no live classes)" },
   { value: "SKILL_BUILDER", label: "Skill Builder", description: "Content only" },
+  { value: "SKILL_BUILDER_LIVE", label: "Skill Builder Live", description: "Content + Live classes" },
 ];
 
 export function ApproveRejectModal({ 

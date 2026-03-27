@@ -36,6 +36,7 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
   const [error, setError] = useState("");
   const [_parsing, setParsing] = useState(false);
   const [visibleForSkillBuilder, setVisibleForSkillBuilder] = useState(false);
+  const [visibleForSkillBuilderLive, setVisibleForSkillBuilderLive] = useState(false);
 
   const REQUIRED_HEADERS = ["date", "title", "description", "type"];
   const VALID_TYPES = ["Audio", "MultipleChoice", "AUDIO", "MULTIPLE_CHOICE"];
@@ -273,6 +274,7 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
         scheduledDate: c.date,
         type: typeMap[c.type] || "AUDIO",
         visibleForSkillBuilder,
+        visibleForSkillBuilderLive,
         quizQuestions: c.type === "MultipleChoice" || c.type === "MULTIPLE_CHOICE"
           ? c.questions?.map(q => ({
             question: q.text,
@@ -383,7 +385,7 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
 
               {/* Skill Builder Visibility - applies to all uploaded challenges */}
               {parsedChallenges.length > 0 && (
-                <div className="rounded-xl border border-gray-200 p-4 bg-gray-50">
+                <div className="rounded-xl border border-gray-200 p-4 bg-gray-50 space-y-3">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -395,6 +397,21 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
                       <span className="font-semibold text-gray-900">Visible for Skill Builder</span>
                       <p className="text-xs text-gray-500 mt-0.5">
                           Enable this to make all uploaded challenges accessible for users with the Skill Builder plan.
+                      </p>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={visibleForSkillBuilderLive}
+                      onChange={(e) => setVisibleForSkillBuilderLive(e.target.checked)}
+                      className="h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500/20"
+                    />
+                    <div>
+                      <span className="font-semibold text-gray-900">Visible for Skill Builder Live</span>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                          Enable this to make all uploaded challenges accessible
+                          for users with the Skill Builder Live plan.
                       </p>
                     </div>
                   </label>
@@ -418,8 +435,8 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {parsedChallenges.map((c, cIdx) => (
-                          <tr key={`challenge-${cIdx}-${c.date}`} className="hover:bg-gray-50/50">
+                        {parsedChallenges.map((c) => (
+                          <tr key={`challenge-${c.date}-${c.title}`} className="hover:bg-gray-50/50">
                             <td className="px-4 py-2 font-medium text-gray-900">{c.date}</td>
                             <td className="px-4 py-2">
                               <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
@@ -434,7 +451,7 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
                                 ? (
                                   <div className="space-y-1">
                                     {c.questions?.map((q, qIdx) => (
-                                      <div key={`q-${cIdx}-${qIdx}`} className="flex gap-2">
+                                      <div key={`q-${c.date}-${q.text}`} className="flex gap-2">
                                         <span className="font-medium">Q{qIdx+1}:</span> {q.text} 
                                         <span className="text-gray-400">({q.options.length} opts)</span>
                                       </div>

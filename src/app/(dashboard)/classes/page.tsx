@@ -73,7 +73,7 @@ export default function ClassesPage() {
   const [classTab, setClassTab] = useState<"upcoming" | "finished">("upcoming");
   const [attendanceClass, setAttendanceClass] = useState<{ id: number; title: string; date: string } | null>(null);
   const [editingClass, setEditingClass] = useState<AdminClass | null>(null);
-  const [editForm, setEditForm] = useState({ title: "", meetLink: "", startTime: "", endTime: "", date: "", type: "REGULAR" as AdminClass["type"], capacityMax: "" as string, description: "", materialsLink: "" });
+  const [editForm, setEditForm] = useState({ title: "", meetLink: "", startTime: "", endTime: "", date: "", type: "REGULAR" as AdminClass["type"], capacityMax: "" as string, description: "", materialsLink: "", visibleForSkillBuilderLive: false });
   const [recordingLinkClass, setRecordingLinkClass] = useState<number | null>(null);
   const [recordingLink, setRecordingLink] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -110,6 +110,7 @@ export default function ClassesPage() {
       capacityMax: session.capacityMax != null ? String(session.capacityMax) : "",
       description: session.description && !session.description.startsWith("[RECORDING]") ? session.description : "",
       materialsLink: session.materialsLink || "",
+      visibleForSkillBuilderLive: session.visibleForSkillBuilderLive ?? false,
     });
   };
 
@@ -125,6 +126,7 @@ export default function ClassesPage() {
       capacityMax: editForm.capacityMax ? parseInt(editForm.capacityMax) : undefined,
       description: editForm.description || undefined,
       materialsLink: editForm.materialsLink || undefined,
+      visibleForSkillBuilderLive: editForm.visibleForSkillBuilderLive,
     } as Partial<CreateClassPayload>);
     setIsSaving(false);
     if (result.success) {
@@ -288,9 +290,14 @@ export default function ClassesPage() {
                         <div className={`rounded-lg px-3 py-1 text-xs font-bold ${session.type === "WORKSHOP" ? "bg-purple-100 text-purple-700" : session.type === "WEBINAR" ? "bg-blue-100 text-blue-700" : session.type === "QA" ? "bg-amber-100 text-amber-700" : session.type === "MASTERCLASS" ? "bg-emerald-100 text-emerald-700" : "bg-brand-primary/10 text-brand-primary"}`}>
                           {session.type === "WORKSHOP" ? "Workshop" : session.type === "WEBINAR" ? "Webinar" : session.type === "QA" ? "Q&A" : session.type === "MASTERCLASS" ? "Masterclass" : "Class"}
                         </div>
-                        {isPast && (
-                          <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-lg">Finished</span>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {session.visibleForSkillBuilderLive && (
+                            <span className="rounded-lg px-2 py-1 text-xs font-bold bg-teal-100 text-teal-700">SB Live</span>
+                          )}
+                          {isPast && (
+                            <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-lg">Finished</span>
+                          )}
+                        </div>
                       </div>
                       <h3 className="font-display text-lg font-bold text-gray-900 mb-1">
                         {session.title}
@@ -522,6 +529,18 @@ export default function ClassesPage() {
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-gray-700">Description</label>
                 <textarea rows={3} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} placeholder="Optional class description..." className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary resize-none" />
+              </div>
+              <div className="flex items-center gap-3 rounded-lg border border-gray-200 p-3">
+                <input
+                  type="checkbox"
+                  id="editVisibleForSkillBuilderLive"
+                  checked={editForm.visibleForSkillBuilderLive}
+                  onChange={(e) => setEditForm({ ...editForm, visibleForSkillBuilderLive: e.target.checked })}
+                  className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                />
+                <label htmlFor="editVisibleForSkillBuilderLive" className="text-sm font-medium text-gray-700">
+                  Visible for Skill Builder Live
+                </label>
               </div>
             </div>
             <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4 shrink-0">

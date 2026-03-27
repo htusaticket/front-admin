@@ -28,6 +28,7 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
     isUnlimited: false,
     hasStrike: false,
     type: "REGULAR" as ClassType,
+    visibleForSkillBuilderLive: false,
   });
   
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
@@ -79,6 +80,7 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
       meetLink: formData.meetLink || undefined,
       capacityMax: formData.isUnlimited ? undefined : formData.maxCapacity,
       description: "",
+      visibleForSkillBuilderLive: formData.visibleForSkillBuilderLive,
     });
 
     if (result.success) {
@@ -93,6 +95,7 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
         isUnlimited: false,
         hasStrike: false,
         type: "REGULAR",
+        visibleForSkillBuilderLive: false,
       });
       setAttachedFiles([]);
       onClose();
@@ -367,6 +370,20 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Skill Builder Live Visibility */}
+              <div className="flex items-center gap-3 rounded-lg border border-gray-200 p-3">
+                <input
+                  type="checkbox"
+                  id="visibleForSkillBuilderLive"
+                  checked={formData.visibleForSkillBuilderLive}
+                  onChange={(e) => setFormData(prev => ({ ...prev, visibleForSkillBuilderLive: e.target.checked }))}
+                  className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                />
+                <label htmlFor="visibleForSkillBuilderLive" className="text-sm font-medium text-gray-700">
+                  Visible for Skill Builder Live
+                </label>
               </div>
 
               {/* Footer */}

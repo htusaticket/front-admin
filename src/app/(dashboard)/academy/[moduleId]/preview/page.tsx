@@ -43,6 +43,10 @@ function convertToEmbedUrl(url: string): string | null {
 
   if (trimmed.includes("player.vimeo.com/video/")) return trimmed;
 
+  // Loom: loom.com/share/xxx -> loom.com/embed/xxx
+  const loomMatch = trimmed.match(/loom\.com\/(?:share|embed)\/([a-zA-Z0-9]+)/);
+  if (loomMatch?.[1]) return `https://www.loom.com/embed/${loomMatch[1]}`;
+
   return trimmed;
 }
 
@@ -176,7 +180,7 @@ export default function ModulePreviewPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold truncate">{lesson.title}</p>
-                    <p className="text-xs text-gray-400">{lesson.duration}</p>
+                    <p className="text-xs text-gray-400">{lesson.duration}{!lesson.duration?.toString().includes("min") && " min"}</p>
                   </div>
                 </button>
               ))}
@@ -225,7 +229,7 @@ export default function ModulePreviewPage() {
                         {selectedLesson.title}
                       </h1>
                       <p className="mt-1 text-sm text-gray-600">
-                        {selectedModule.title} • {selectedLesson.duration}
+                        {selectedModule.title} • {selectedLesson.duration}{!selectedLesson.duration?.toString().includes("min") && " min"}
                       </p>
                       {selectedLesson.description && (
                         <div className="mt-4">
@@ -260,7 +264,7 @@ export default function ModulePreviewPage() {
                       </h1>
                       <p className="text-sm text-gray-500 flex items-center gap-1.5">
                         <Clock className="h-3.5 w-3.5" />
-                        {selectedLesson.duration}
+                        {selectedLesson.duration}{!selectedLesson.duration?.toString().includes("min") && " min"}
                       </p>
                     </div>
                   </div>

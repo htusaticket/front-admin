@@ -29,6 +29,7 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
     date: "",
     type: "AUDIO" as "AUDIO" | "MULTIPLE_CHOICE",
     visibleForSkillBuilder: false,
+    visibleForSkillBuilderLive: false,
     audioUrl: "",
     questions: [
       { id: 1, text: "", options: ["", "", ""], correctAnswer: "" },
@@ -120,6 +121,7 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
       scheduledDate: formData.date,
       type: formData.type,
       visibleForSkillBuilder: formData.visibleForSkillBuilder,
+      visibleForSkillBuilderLive: formData.visibleForSkillBuilderLive,
       audioUrl: formData.type === "AUDIO" ? formData.audioUrl : undefined,
       quizQuestions: formData.type === "MULTIPLE_CHOICE" 
         ? formData.questions.map(q => ({
@@ -140,6 +142,7 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
         date: "",
         type: "AUDIO",
         visibleForSkillBuilder: false,
+        visibleForSkillBuilderLive: false,
         audioUrl: "",
         questions: [{ id: 1, text: "", options: ["", "", ""], correctAnswer: "" }],
       });
@@ -243,7 +246,7 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                 </div>
 
                 {/* Skill Builder Visibility */}
-                <div className="rounded-xl border border-gray-200 p-4 bg-gray-50">
+                <div className="rounded-xl border border-gray-200 p-4 bg-gray-50 space-y-3">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -257,6 +260,22 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                       <span className="font-semibold text-gray-900">Visible for Skill Builder</span>
                       <p className="text-xs text-gray-500 mt-0.5">
                           Enable this to make the challenge accessible for users with the Skill Builder plan.
+                      </p>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.visibleForSkillBuilderLive}
+                      onChange={(e) =>
+                        setFormData({ ...formData, visibleForSkillBuilderLive: e.target.checked })
+                      }
+                      className="h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500/20"
+                    />
+                    <div>
+                      <span className="font-semibold text-gray-900">Visible for Skill Builder Live</span>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                          Enable this to make the challenge accessible for users with the Skill Builder Live plan.
                       </p>
                     </div>
                   </label>

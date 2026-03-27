@@ -55,10 +55,11 @@ const getPlanBadge = (plan: UserPlan | null) => {
     LEVEL_UP: "bg-blue-100 text-blue-800",
     HIRING_HUB: "bg-green-100 text-green-800",
     SKILL_BUILDER: "bg-cyan-100 text-cyan-800",
+    SKILL_BUILDER_LIVE: "bg-teal-100 text-teal-800",
   };
   return (
     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${colors[plan]}`}>
-      {plan.replace("_", " ")}
+      {plan.replaceAll("_", " ")}
     </span>
   );
 };
@@ -88,6 +89,7 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<UserStatus | "All">("All");
   const [roleFilter, setRoleFilter] = useState<UserRole | "All">("All");
+  const [filtersInitialized, setFiltersInitialized] = useState(false);
   const itemsPerPage = 10;
 
   // Debounced search
@@ -108,13 +110,15 @@ export default function UsersPage() {
   // Initial load - use page from URL if returning from user detail
   useEffect(() => {
     fetchUsers({ page: initialPage, limit: itemsPerPage });
+    setFiltersInitialized(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchUsers]);
 
-  // Refetch when filters change
+  // Refetch when filters change (skip initial mount to avoid overriding page from URL)
   useEffect(() => {
+    if (!filtersInitialized) return;
     debouncedFetch(searchQuery, statusFilter, roleFilter);
-  }, [searchQuery, statusFilter, roleFilter, debouncedFetch]);
+  }, [searchQuery, statusFilter, roleFilter, debouncedFetch, filtersInitialized]);
 
   const handlePageChange = (newPage: number) => {
     fetchUsers({
