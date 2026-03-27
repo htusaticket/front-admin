@@ -18,9 +18,10 @@ import {
   MapPin,
   CreditCard,
   UserCheck,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -85,8 +86,11 @@ const getAttendanceBadge = (status: AttendanceStatus | null) => {
 
 export default function UserDetailPage() {
   const params = useParams();
-  const _router = useRouter();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const userId = params.userId as string;
+  // Preserve the page the user came from
+  const fromPage = searchParams.get("fromPage") || "1";
   
   const { 
     selectedUser: user, 
@@ -96,6 +100,7 @@ export default function UserDetailPage() {
     updateUserStatus,
     updateUserNotes,
     removePunishment,
+    deleteUser,
     clearSelectedUser, 
   } = useUsersStore();
 
@@ -105,6 +110,8 @@ export default function UserDetailPage() {
   const [isStrikeModalOpen, setIsStrikeModalOpen] = useState(false);
   const [isApproveRejectModalOpen, setIsApproveRejectModalOpen] = useState(false);
   const [isActivateModalOpen, setIsActivateModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [notesValue, setNotesValue] = useState("");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
 
@@ -206,6 +213,20 @@ export default function UserDetailPage() {
     await removePunishment(userId);
   };
 
+  const handleDeleteUser = async () => {
+    if (!userId) return;
+    setIsDeleting(true);
+    const result = await deleteUser(userId);
+    setIsDeleting(false);
+    if (result.success) {
+      toast.success(result.message || "User permanently deleted");
+      setIsDeleteModalOpen(false);
+      router.push(`/users?page=${fromPage}`);
+    } else {
+      toast.error(result.message || "Error deleting user");
+    }
+  };
+
   // Pagination for classes
   const enrollments = user?.enrollments || [];
   const classesTotalPages = Math.ceil(enrollments.length / itemsPerPage);
@@ -261,7 +282,7 @@ export default function UserDetailPage() {
   if (error) {
     return (
       <div className="space-y-4">
-        <Link href="/users" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
+        <Link href={`/users?page=${fromPage}`} className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
           <ArrowLeft className="h-4 w-4" />
           Back to Users
         </Link>
@@ -275,7 +296,7 @@ export default function UserDetailPage() {
   if (!user) {
     return (
       <div className="space-y-4">
-        <Link href="/users" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
+        <Link href={`/users?page=${fromPage}`} className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
           <ArrowLeft className="h-4 w-4" />
           Back to Users
         </Link>
@@ -287,7 +308,7 @@ export default function UserDetailPage() {
   return (
     <div className="space-y-6">
       {/* Back Button */}
-      <Link href="/users" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
+      <Link href={`/users?page=${fromPage}`} className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
         <ArrowLeft className="h-4 w-4" />
         Back to Users
       </Link>
@@ -427,6 +448,21 @@ export default function UserDetailPage() {
                           Suspend User
                         </button>
                       ) : null}
+                      {/* Permanent Delete - only for SUPERADMIN, cannot delete other SUPERADMINs */}
+                      {user.role !== "SUPERADMIN" && (
+                        <>
+                          <div className="border-t border-gray-100 my-1" />
+                          <button 
+                            onClick={() => {
+                              setIsMenuOpen(false);
+                              setIsDeleteModalOpen(true);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-sm font-medium text-red-700 hover:bg-red-50 transition-colors"
+                          >
+                            🗑️ Delete Permanently
+                          </button>
+                        </>
+                      )}
                     </div>
                   </>
                 )}
@@ -440,9 +476,10 @@ export default function UserDetailPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats
           .filter((stat) => {
-            // Hide class-attendance and strikes stats for JOB_UPLOADER
-            if (user.role === "JOB_UPLOADER") {
-              return stat.label !== "Classes Attended" && stat.label !== "Avg. Attendance" && stat.label !== "Active Strikes";
+            // Hide class-attendance, strikes, and jobs stats for non-student roles
+            const nonStudentRoles = ["JOB_UPLOADER", "ADMIN", "SUPERADMIN"];
+            if (user.role && nonStudentRoles.includes(user.role)) {
+              return false;
             }
             return true;
           })
@@ -471,8 +508,9 @@ export default function UserDetailPage() {
             { id: "strikes", label: "Strikes", icon: AlertTriangle },
           ]
             .filter((tab) => {
-              // Hide classes and strikes tabs for JOB_UPLOADER users
-              if (user.role === "JOB_UPLOADER") {
+              // Hide classes and strikes tabs for non-student roles
+              const nonStudentRoles = ["JOB_UPLOADER", "ADMIN", "SUPERADMIN"];
+              if (user.role && nonStudentRoles.includes(user.role)) {
                 return tab.id !== "classes" && tab.id !== "strikes";
               }
               return true;
@@ -817,6 +855,69 @@ export default function UserDetailPage() {
         userName={`${user.firstName} ${user.lastName}`}
         userEmail={user.email}
       />
+
+      {/* Delete User Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+          onClick={() => !isDeleting && setIsDeleteModalOpen(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-red-50 px-6 py-4 border-b border-red-100">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100">
+                  <Trash2 className="h-5 w-5 text-red-600" />
+                </div>
+                <h3 className="font-display text-lg font-bold text-red-900">
+                  Permanent Deletion
+                </h3>
+              </div>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-700 mb-3">
+                You are about to <strong className="text-red-600">permanently delete</strong> the user:
+              </p>
+              <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 mb-4">
+                <p className="font-bold text-gray-900">{user.firstName} {user.lastName}</p>
+                <p className="text-sm text-gray-500">{user.email}</p>
+                <p className="text-xs text-gray-400 mt-1">Role: {user.role === "USER" ? "Student" : user.role}</p>
+              </div>
+              <div className="rounded-xl border-2 border-red-200 bg-red-50 p-4">
+                <p className="text-sm font-bold text-red-800 mb-1">⚠️ This action is irreversible</p>
+                <p className="text-xs text-red-700">
+                  All data associated with this user will be permanently removed, including enrollments, strikes, academy progress, and any other related records.
+                </p>
+              </div>
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => setIsDeleteModalOpen(false)}
+                  disabled={isDeleting}
+                  className="flex-1 rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 transition-all hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteUser}
+                  disabled={isDeleting}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white transition-all hover:bg-red-700 disabled:opacity-50"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                  {isDeleting ? "Deleting..." : "Delete Permanently"}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

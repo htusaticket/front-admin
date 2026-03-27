@@ -21,9 +21,6 @@ const comfortaa = Comfortaa({
 export const metadata: Metadata = {
   title: "High Ticket USA Admin",
   description: "Admin panel for High Ticket USA platform",
-  icons: {
-    icon: "/HT_USA_Logo-lau.png",
-  },
 };
 
 export default function RootLayout({

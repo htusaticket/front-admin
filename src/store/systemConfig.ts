@@ -72,7 +72,6 @@ export const useSystemConfigStore = create<SystemConfigStore>((set) => ({
     } catch (error) {
       const message = getErrorMessage(error);
       set({ error: message, isLoading: false });
-      toast.error(message);
     }
   },
 

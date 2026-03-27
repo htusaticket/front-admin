@@ -28,6 +28,76 @@ interface ParsedClass {
 
 const VALID_TYPES = ["REGULAR", "WORKSHOP", "WEBINAR", "QA", "MASTERCLASS"];
 
+/**
+ * Normalize an Excel date value to YYYY-MM-DD format.
+ * Handles: serial numbers (46099), MM/DD/YYYY, DD-MM-YYYY, YYYY-MM-DD, and short formats like 4/1.
+ */
+function normalizeDate(raw: string | number | undefined): string {
+  if (raw === undefined || raw === null || raw === "") return "";
+  // Handle Excel serial date numbers (e.g. 46099)
+  if (typeof raw === "number" || (!isNaN(Number(raw)) && /^\d{4,5}(\.\d+)?$/.test(String(raw)))) {
+    const serial = typeof raw === "number" ? raw : Number(raw);
+    const d = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
+    return d.toISOString().split("T")[0];
+  }
+  const str = String(raw).trim();
+  // Already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  // Handle slash formats: M/D/YYYY or M/D (infer current year)
+  const slashMatch = str.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+  if (slashMatch) {
+    const [, a, b, c] = slashMatch;
+    let year: string;
+    if (c) {
+      year = c.length === 2 ? `20${c}` : c;
+    } else {
+      year = String(new Date().getFullYear());
+    }
+    // Treat as MM/DD/YYYY (US format, which is what Excel uses)
+    return `${year}-${a!.padStart(2, "0")}-${b!.padStart(2, "0")}`;
+  }
+  // Handle dash formats: DD-MM-YYYY
+  const dashMatch = str.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (dashMatch) {
+    const [, day, month, year] = dashMatch;
+    return `${year}-${month!.padStart(2, "0")}-${day!.padStart(2, "0")}`;
+  }
+  return str;
+}
+
+/**
+ * Normalize an Excel time value to HH:MM format.
+ * Handles: decimal fractions of day (0.583333 = 14:00), HH:MM, HH:MM:SS.
+ */
+function normalizeTime(raw: string | number | undefined): string {
+  if (raw === undefined || raw === null || raw === "") return "";
+  // Handle Excel time decimal (fraction of a day, e.g. 0.5833 = 14:00)
+  if (typeof raw === "number" || (!isNaN(Number(raw)) && Number(raw) >= 0 && Number(raw) < 1)) {
+    const num = typeof raw === "number" ? raw : Number(raw);
+    if (num >= 0 && num < 1) {
+      const totalMinutes = Math.round(num * 24 * 60);
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+    }
+  }
+  const str = String(raw).trim();
+  // Already HH:MM or HH:MM:SS - normalize to HH:MM
+  const timeMatch = str.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (timeMatch) {
+    return `${timeMatch[1]!.padStart(2, "0")}:${timeMatch[2]}`;
+  }
+  // Try parsing as a decimal string like "0.583333333"
+  const num = parseFloat(str);
+  if (!isNaN(num) && num >= 0 && num < 1) {
+    const totalMinutes = Math.round(num * 24 * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  }
+  return str;
+}
+
 export function UploadClassesModal({ isOpen, onClose }: UploadClassesModalProps) {
   useModalLock(isOpen, onClose);
   const { bulkCreateClasses, isLoading } = useClassesStore();
@@ -50,7 +120,7 @@ export function UploadClassesModal({ isOpen, onClose }: UploadClassesModalProps)
         const workbook = XLSX.read(data, { type: "binary" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json<Record<string, string>>(worksheet, { defval: "" });
+        const rows = XLSX.utils.sheet_to_json<Record<string, string | number>>(worksheet, { defval: "", raw: true });
 
         if (rows.length === 0) {
           setError("The spreadsheet is empty. Add rows with class data.");
@@ -66,13 +136,21 @@ export function UploadClassesModal({ isOpen, onClose }: UploadClassesModalProps)
             }
             return "";
           };
+          // Get raw values for date and time (may be numbers from Excel)
+          const getRaw = (keys: string[]): string | number | undefined => {
+            for (const key of keys) {
+              const found = Object.keys(row).find(k => k.toLowerCase().trim() === key.toLowerCase());
+              if (found && row[found] !== undefined && row[found] !== "") return row[found] as string | number;
+            }
+            return undefined;
+          };
 
           return {
             title: get(["title", "titulo", "class", "nombre"]),
             type: (get(["type", "tipo"]) || "REGULAR").toUpperCase(),
-            date: get(["date", "fecha"]),
-            startTime: get(["start", "starttime", "start time", "hora inicio", "inicio"]),
-            endTime: get(["end", "endtime", "end time", "hora fin", "fin"]),
+            date: normalizeDate(getRaw(["date", "fecha"])),
+            startTime: normalizeTime(getRaw(["start", "starttime", "start time", "hora inicio", "inicio"])),
+            endTime: normalizeTime(getRaw(["end", "endtime", "end time", "hora fin", "fin"])),
             meetLink: get(["link", "meetlink", "meet link", "meet", "zoom", "zoom link"]),
             capacity: get(["capacity", "capacidad", "max", "maxcapacity"]),
             description: get(["description", "descripcion", "desc"]),
@@ -91,17 +169,8 @@ export function UploadClassesModal({ isOpen, onClose }: UploadClassesModalProps)
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const pastClasses = valid.filter(c => {
-          let isoDate = c.date;
-          const slashParts = c.date.split("/");
-          const dashParts = c.date.split("-");
-          if (slashParts.length === 3) {
-            const [a, b, cc] = slashParts;
-            if (cc.length === 4) isoDate = `${cc}-${a.padStart(2, "0")}-${b.padStart(2, "0")}`;
-          } else if (dashParts.length === 3 && dashParts[0].length !== 4) {
-            const [a, b, cc] = dashParts;
-            if (cc.length === 4) isoDate = `${cc}-${b.padStart(2, "0")}-${a.padStart(2, "0")}`;
-          }
-          const classDate = new Date(isoDate + "T00:00:00");
+          // Date is already normalized to YYYY-MM-DD by normalizeDate()
+          const classDate = new Date(c.date + "T00:00:00");
           return classDate < today;
         });
 
@@ -124,28 +193,14 @@ export function UploadClassesModal({ isOpen, onClose }: UploadClassesModalProps)
     const classPayloads = parsedClasses.map(cls => {
       const type = VALID_TYPES.includes(cls.type) ? cls.type : "REGULAR";
 
-      // Normalize date to YYYY-MM-DD for valid ISO 8601
-      let isoDate = cls.date;
-      // Handle MM/DD/YYYY or DD/MM/YYYY formats
-      const slashParts = cls.date.split("/");
-      const dashParts = cls.date.split("-");
-      if (slashParts.length === 3) {
-        const [a, b, c] = slashParts;
-        if (c.length === 4) {
-          // MM/DD/YYYY → YYYY-MM-DD
-          isoDate = `${c}-${a.padStart(2, "0")}-${b.padStart(2, "0")}`;
-        }
-      } else if (dashParts.length === 3 && dashParts[0].length !== 4) {
-        const [a, b, c] = dashParts;
-        if (c.length === 4) {
-          // DD-MM-YYYY → YYYY-MM-DD
-          isoDate = `${c}-${b.padStart(2, "0")}-${a.padStart(2, "0")}`;
-        }
-      }
+      // Date is already normalized to YYYY-MM-DD and time to HH:MM by normalizeDate/normalizeTime
+      const isoDate = cls.date;
+      const startTime = cls.startTime;
+      const endTime = cls.endTime;
 
       // Build ISO date-time strings
-      const startISO = `${isoDate}T${cls.startTime}:00.000Z`;
-      const endISO = `${isoDate}T${cls.endTime}:00.000Z`;
+      const startISO = `${isoDate}T${startTime}:00.000Z`;
+      const endISO = `${isoDate}T${endTime}:00.000Z`;
 
       return {
         title: cls.title,
