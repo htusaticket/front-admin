@@ -81,7 +81,7 @@ export default function ChallengesPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold text-brand-primary">
             Daily Challenges
@@ -90,7 +90,7 @@ export default function ChallengesPage() {
             Create and manage daily missions. One challenge per day.
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2 sm:gap-3">
           <button 
             onClick={() => setIsUploadModalOpen(true)}
             className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-bold text-gray-700 transition-all hover:border-brand-primary/20 hover:bg-brand-primary/5 hover:text-brand-primary"
@@ -122,7 +122,8 @@ export default function ChallengesPage() {
           <h2 className="font-bold text-gray-900">Next 7 Days</h2>
         </div>
          
-        <div className="grid grid-cols-7 gap-4">
+        <div className="overflow-x-auto">
+        <div className="grid grid-cols-7 gap-3 min-w-[480px]">
           {next7Days.map((day) => {
             const challenge = getChallengeForDate(day.date);
             const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
@@ -170,6 +171,7 @@ export default function ChallengesPage() {
             );
           })}
         </div>
+        </div>
       </div>
 
       {/* Challenges List */ }
@@ -185,7 +187,7 @@ export default function ChallengesPage() {
               key={challenge.id}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex items-center justify-between p-6 hover:bg-gray-50 transition-colors"
+              className="flex flex-wrap items-center justify-between gap-y-3 p-6 hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-start gap-4">
                 <div className={`mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
