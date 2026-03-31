@@ -609,6 +609,7 @@ export default function UserDetailPage() {
         {activeTab === "academy" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
             {user.academyProgress && user.academyProgress.length > 0 ? (
+              <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -663,8 +664,7 @@ export default function UserDetailPage() {
                     );
                   })}
                 </tbody>
-              </table>
-            ) : (
+              </table>              </div>            ) : (
               <div className="p-8 text-center text-gray-500">
                 No academy progress yet
               </div>
@@ -677,6 +677,7 @@ export default function UserDetailPage() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
             {paginatedEnrollments.length > 0 ? (
               <>
+                <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
@@ -705,6 +706,7 @@ export default function UserDetailPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
                 <Pagination 
                   currentPage={classesPage}
                   totalPages={classesTotalPages}
@@ -783,6 +785,7 @@ export default function UserDetailPage() {
              
             {user.strikes?.history && user.strikes.history.length > 0 ? (
               <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
@@ -815,6 +818,7 @@ export default function UserDetailPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             ) : (
               <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center">
