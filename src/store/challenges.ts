@@ -8,7 +8,7 @@ import type { ApiResponse } from "@/types/admin";
 export interface QuizQuestion {
   question: string;
   options: string[];
-  correctAnswer: string;
+  correctAnswer: number;
 }
 
 // Backend response interface
@@ -213,16 +213,14 @@ export const useChallengesStore = create<ChallengesStore>((set, get) => ({
         questions: data.quizQuestions?.map(q => ({
           text: q.question,
           options: q.options,
-          correctAnswer: typeof q.correctAnswer === "string"
-            ? Math.max(0, q.options.indexOf(q.correctAnswer))
-            : q.correctAnswer,
+          correctAnswer: q.correctAnswer,
         })),
         audioUrl: data.audioUrl,
         points: data.points,
         visibleForSkillBuilder: data.visibleForSkillBuilder,
         visibleForSkillBuilderLive: data.visibleForSkillBuilderLive,
       };
-      
+
       const response = await api.post<ApiResponse<Challenge>>(
         "/api/admin/challenges",
         backendData,
@@ -254,9 +252,7 @@ export const useChallengesStore = create<ChallengesStore>((set, get) => ({
       if (data.quizQuestions !== undefined) backendData.questions = data.quizQuestions?.map(q => ({
         text: q.question,
         options: q.options,
-        correctAnswer: typeof q.correctAnswer === "string"
-          ? q.options.indexOf(q.correctAnswer)
-          : q.correctAnswer,
+        correctAnswer: q.correctAnswer,
       }));
       if (data.audioUrl !== undefined) backendData.audioUrl = data.audioUrl;
       if (data.points !== undefined) backendData.points = data.points;
@@ -327,28 +323,11 @@ export const useChallengesStore = create<ChallengesStore>((set, get) => ({
         instructions: data.description, // Backend uses 'instructions'
         type: data.type,
         date: data.scheduledDate, // Backend uses 'date'
-        questions: data.quizQuestions?.map(q => {
-          // Convert correctAnswer to numeric index (backend expects 0-based index)
-          let correctIdx: number;
-          if (typeof q.correctAnswer === "number") {
-            correctIdx = q.correctAnswer;
-          } else {
-            // Try as numeric string first (e.g. "0", "1", "2")
-            const parsed = parseInt(q.correctAnswer, 10);
-            if (!isNaN(parsed) && parsed >= 0 && parsed < q.options.length) {
-              correctIdx = parsed;
-            } else {
-              // Try matching by option text
-              const idx = q.options.indexOf(q.correctAnswer);
-              correctIdx = idx >= 0 ? idx : 0;
-            }
-          }
-          return {
-            text: q.question,
-            options: q.options,
-            correctAnswer: correctIdx,
-          };
-        }),
+        questions: data.quizQuestions?.map(q => ({
+          text: q.question,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+        })),
         audioUrl: data.audioUrl,
         points: data.points,
         visibleForSkillBuilder: data.visibleForSkillBuilder,

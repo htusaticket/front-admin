@@ -220,6 +220,7 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
         recruiterSocial: job.recruiterSocial || undefined,
         website: job.website || undefined,
         email: job.email || undefined,
+        code: job.code || undefined,
       };
     });
     
