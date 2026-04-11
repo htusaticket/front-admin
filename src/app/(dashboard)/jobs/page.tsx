@@ -308,10 +308,15 @@ export default function JobsPage() {
                       : "border-gray-200"
                   }`}
                 >
-                  <div className="mb-3 flex items-start justify-between">
+                  <div className="mb-3 flex items-start justify-between gap-2">
                     <h3 className="flex-1 font-bold text-brand-primary">
                       {job.title}
                     </h3>
+                    {job.code && (
+                      <span className="shrink-0 rounded-md bg-brand-primary/10 px-2 py-0.5 text-xs font-bold text-brand-primary">
+                        CODE: {job.code}
+                      </span>
+                    )}
                   </div>
                   <p className="mb-2 text-sm font-semibold text-gray-700">
                     {job.company}
@@ -387,6 +392,11 @@ export default function JobsPage() {
                         <p className="mt-1 text-lg font-semibold text-gray-700">
                           {selectedJob.company}
                         </p>
+                        {selectedJob.code && (
+                          <p className="mt-2 inline-block rounded-md bg-brand-primary/10 px-2.5 py-1 text-sm font-bold text-brand-primary">
+                            CODE: {selectedJob.code}
+                          </p>
+                        )}
                       </div>
                       <span className={`rounded-full px-3 py-1 text-xs font-bold ${
                         selectedJob.isActive 

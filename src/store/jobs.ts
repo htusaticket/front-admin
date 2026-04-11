@@ -33,6 +33,7 @@ export interface JobOffer {
   recruiterSocial?: string | null;
   website?: string | null;
   email?: string | null;
+  code?: string | null;
   createdAt: string;
   updatedAt: string;
   applications?: JobApplication[];
@@ -61,6 +62,7 @@ export interface CreateJobData {
   recruiterSocial?: string;
   website?: string;
   email?: string;
+  code?: string;
 }
 
 export interface BulkCreateResponse {

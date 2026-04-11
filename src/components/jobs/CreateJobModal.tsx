@@ -48,6 +48,7 @@ export function CreateJobModal({ isOpen, onClose }: CreateJobModalProps) {
     recruiterSocial: "",
     website: "",
     email: "",
+    code: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -105,6 +106,7 @@ export function CreateJobModal({ isOpen, onClose }: CreateJobModalProps) {
       recruiterSocial: formData.recruiterSocial.trim() || undefined,
       website: formData.website.trim() || undefined,
       email: formData.email.trim() || undefined,
+      code: formData.code.trim() || undefined,
       isActive: true,
     };
 
@@ -128,6 +130,7 @@ export function CreateJobModal({ isOpen, onClose }: CreateJobModalProps) {
       recruiterSocial: "",
       website: "",
       email: "",
+      code: "",
     });
     setRequirements([{ id: `${uniqueId}-req-reset-${Date.now()}`, value: "" }]);
     setErrors({});
@@ -269,6 +272,20 @@ export function CreateJobModal({ isOpen, onClose }: CreateJobModalProps) {
                     className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition-colors focus:border-brand-primary"
                   />
                 </div>
+              </div>
+
+              {/* Apply Code */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Apply Code
+                </label>
+                <input
+                  type="text"
+                  value={formData.code}
+                  onChange={(e) => handleInputChange("code", e.target.value)}
+                  placeholder="02306 (auto-detectado desde la descripción si se deja vacío)"
+                  className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition-colors focus:border-brand-primary"
+                />
               </div>
 
               {/* Job Type */}

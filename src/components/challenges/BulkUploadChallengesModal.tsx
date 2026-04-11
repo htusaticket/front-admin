@@ -260,14 +260,24 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
   };
 
   const handleSubmit = async () => {
+    const typeMap: Record<string, "AUDIO" | "MULTIPLE_CHOICE"> = {
+      "Audio": "AUDIO",
+      "AUDIO": "AUDIO",
+      "MultipleChoice": "MULTIPLE_CHOICE",
+      "MULTIPLE_CHOICE": "MULTIPLE_CHOICE",
+    };
+
+    // CSV CorrectAnswer is a 1-based option number (Excel convention).
+    // Returns the 0-based index or -1 if out of range.
+    const resolveCorrectIndex = (raw: string, options: string[]): number => {
+      const parsed = parseInt(raw.trim(), 10);
+      if (isNaN(parsed) || parsed < 1 || parsed > options.length) return -1;
+      return parsed - 1;
+    };
+
+    const resolutionErrors: string[] = [];
     const challengesToCreate = parsedChallenges.map(c => {
-      const typeMap: Record<string, "AUDIO" | "MULTIPLE_CHOICE"> = {
-        "Audio": "AUDIO",
-        "AUDIO": "AUDIO",
-        "MultipleChoice": "MULTIPLE_CHOICE", 
-        "MULTIPLE_CHOICE": "MULTIPLE_CHOICE",
-      };
-      
+      const isQuiz = c.type === "MultipleChoice" || c.type === "MULTIPLE_CHOICE";
       return {
         title: c.title,
         description: c.description,
@@ -275,16 +285,32 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
         type: typeMap[c.type] || "AUDIO",
         visibleForSkillBuilder,
         visibleForSkillBuilderLive,
-        quizQuestions: c.type === "MultipleChoice" || c.type === "MULTIPLE_CHOICE"
-          ? c.questions?.map(q => ({
-            question: q.text,
-            options: q.options,
-            correctAnswer: q.correctAnswer,
-          }))
+        quizQuestions: isQuiz
+          ? c.questions?.map((q, qi) => {
+            const idx = resolveCorrectIndex(q.correctAnswer, q.options);
+            if (idx < 0) {
+              resolutionErrors.push(
+                `"${c.title}" - pregunta ${qi + 1}: CorrectAnswer "${q.correctAnswer}" no coincide con ninguna opción.`,
+              );
+            }
+            return {
+              question: q.text,
+              options: q.options,
+              correctAnswer: idx,
+            };
+          })
           : undefined,
       };
     });
-    
+
+    if (resolutionErrors.length > 0) {
+      setError(
+        `Se encontraron respuestas correctas que no coinciden con las opciones:\n${ 
+          resolutionErrors.join("\n")}`,
+      );
+      return;
+    }
+
     const result = await bulkCreateChallenges(challengesToCreate);
     
     if (result.failed === 0 && result.created > 0) {

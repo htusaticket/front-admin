@@ -16,7 +16,7 @@ interface Question {
     id: number;
     text: string;
     options: string[];
-    correctAnswer: string;
+    correctAnswer: number;
 }
 
 export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalProps) {
@@ -32,7 +32,7 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
     visibleForSkillBuilderLive: false,
     audioUrl: "",
     questions: [
-      { id: 1, text: "", options: ["", "", ""], correctAnswer: "" },
+      { id: 1, text: "", options: ["", "", ""], correctAnswer: -1 },
     ] as Question[],
   });
 
@@ -43,7 +43,7 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
       ...formData,
       questions: [
         ...formData.questions,
-        { id: newId, text: "", options: ["", "", ""], correctAnswer: "" },
+        { id: newId, text: "", options: ["", "", ""], correctAnswer: -1 },
       ],
     });
   };
@@ -54,7 +54,11 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
     setFormData({ ...formData, questions: newQuestions });
   };
 
-  const updateQuestion = (index: number, field: keyof Question, value: string | string[]) => {
+  const updateQuestion = (
+    index: number,
+    field: keyof Question,
+    value: string | string[] | number,
+  ) => {
     const newQuestions = [...formData.questions];
     newQuestions[index] = { ...newQuestions[index], [field]: value };
     setFormData({ ...formData, questions: newQuestions });
@@ -76,7 +80,14 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
 
   const removeOption = (qIndex: number, oIndex: number) => {
     const newQuestions = [...formData.questions];
-    newQuestions[qIndex].options = newQuestions[qIndex].options.filter((_, i) => i !== oIndex);
+    const question = { ...newQuestions[qIndex] };
+    question.options = question.options.filter((_, i) => i !== oIndex);
+    if (question.correctAnswer === oIndex) {
+      question.correctAnswer = -1;
+    } else if (question.correctAnswer > oIndex) {
+      question.correctAnswer -= 1;
+    }
+    newQuestions[qIndex] = question;
     setFormData({ ...formData, questions: newQuestions });
   };
 
@@ -103,7 +114,7 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
           alert(`Please enter text for Question ${i + 1}`);
           return;
         }
-        if (!q.correctAnswer) {
+        if (q.correctAnswer < 0) {
           alert(`Please select a correct answer for Question ${i + 1}`);
           return;
         }
@@ -144,7 +155,7 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
         visibleForSkillBuilder: false,
         visibleForSkillBuilderLive: false,
         audioUrl: "",
-        questions: [{ id: 1, text: "", options: ["", "", ""], correctAnswer: "" }],
+        questions: [{ id: 1, text: "", options: ["", "", ""], correctAnswer: -1 }],
       });
       
       onClose();
@@ -325,11 +336,11 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                                     className="flex gap-2"
                                   >
                                     <div className="flex items-center h-full pt-2.5">
-                                      <input 
-                                        type="radio" 
-                                        name={`correct-${q.id}`} 
-                                        checked={q.correctAnswer === opt && opt !== ""}
-                                        onChange={() => updateQuestion(qIndex, "correctAnswer", opt)}
+                                      <input
+                                        type="radio"
+                                        name={`correct-${q.id}`}
+                                        checked={q.correctAnswer === oIndex}
+                                        onChange={() => updateQuestion(qIndex, "correctAnswer", oIndex)}
                                         className="accent-brand-primary h-4 w-4 cursor-pointer"
                                       />
                                     </div>
