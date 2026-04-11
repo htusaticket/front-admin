@@ -385,18 +385,6 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
                 )}
               </div>
 
-              {/* Required Structure Info */}
-              <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm">
-                <p className="font-semibold text-blue-800 mb-2">📋 Estructura requerida del Excel:</p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-blue-700">
-                  <p><span className="font-medium">Date</span> — Fecha (DD-MM-YYYY, DD/MM/YYYY o YYYY-MM-DD)</p>
-                  <p><span className="font-medium">Title</span> — Título del challenge</p>
-                  <p><span className="font-medium">Description</span> — Instrucciones</p>
-                  <p><span className="font-medium">Type</span> — Audio o MultipleChoice</p>
-                </div>
-                <p className="text-blue-600 mt-2 text-xs">Para tipo <strong>MultipleChoice</strong> agregar columnas: Question, Options (separadas por coma), CorrectAnswer</p>
-              </div>
-
               {error && (
                 <div className="flex gap-2 rounded-lg bg-red-50 p-4 text-sm text-red-600">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />

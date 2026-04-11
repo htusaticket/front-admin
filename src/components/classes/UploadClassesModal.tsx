@@ -270,16 +270,6 @@ export function UploadClassesModal({ isOpen, onClose }: UploadClassesModalProps)
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
-              {/* Format guide */}
-              <div className="rounded-xl bg-blue-50 border border-blue-100 p-4 text-sm text-blue-700">
-                <p className="font-semibold mb-1">Expected columns:</p>
-                <p className="text-xs">
-                  <strong>Title</strong> (required), <strong>Date</strong> (YYYY-MM-DD, required),{" "}
-                  <strong>Start Time</strong> (HH:MM, required), <strong>End Time</strong> (HH:MM, required),{" "}
-                  Type, Meet Link, Capacity, Description, Materials Link
-                </p>
-              </div>
-
               {/* File Upload */}
               <div className={`relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-all ${
                 file ? "border-green-500/30 bg-green-50" : "border-gray-200 hover:border-brand-primary/50"

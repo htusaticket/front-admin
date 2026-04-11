@@ -90,8 +90,8 @@ export default function CorrectionsPage() {
       )}
 
       {/* Tabs & Filters */}
-      <div className="flex items-center justify-between border-b border-gray-200">
-        <div className="flex gap-6">
+      <div className="flex flex-col gap-3 border-b border-gray-200 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex gap-4 overflow-x-auto">
           <button 
             onClick={() => setActiveTab("PENDING")}
             className={`pb-4 text-sm font-bold transition-all relative ${
@@ -130,7 +130,7 @@ export default function CorrectionsPage() {
           </button>
         </div>
           
-        <div className="pb-2">
+        <div className="pb-0 sm:pb-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input 
@@ -138,7 +138,7 @@ export default function CorrectionsPage() {
               placeholder="Search students or challenges..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:border-brand-primary w-64"
+              className="pl-9 pr-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:border-brand-primary w-full sm:w-64"
             />
           </div>
         </div>
@@ -167,7 +167,7 @@ export default function CorrectionsPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 onClick={() => handleReviewClick(submission)}
-                className="flex items-center justify-between bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                className="flex flex-wrap items-center justify-between gap-y-3 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-6">
                   {/* Avatar */}
