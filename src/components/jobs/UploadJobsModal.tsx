@@ -272,7 +272,9 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
       };
     });
     
-    await bulkCreateJobs(jobsToCreate);
+    // Reverse so the first offer in the doc (newest) is created last
+    // and appears on top in the CRM (which orders by createdAt desc).
+    await bulkCreateJobs([...jobsToCreate].reverse());
     setParsedJobs([]);
     setFile(null);
     onClose();
@@ -285,7 +287,7 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={onClose}
+          onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
         >
           <motion.div

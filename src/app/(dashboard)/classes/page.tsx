@@ -78,13 +78,13 @@ export default function ClassesPage() {
   const [recordingLink, setRecordingLink] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 12;
+  const ITEMS_PER_PAGE = 30;
 
   // Lock body scroll and escape for edit class modal
   useModalLock(!!editingClass, () => setEditingClass(null));
 
   useEffect(() => {
-    fetchClasses({ limit: 50 });
+    fetchClasses({ limit: 200 });
   }, [fetchClasses]);
 
   const handleAttendanceClick = (classItem: typeof classes[0]) => {
