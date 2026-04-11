@@ -45,60 +45,97 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
   const parseText = (text: string) => {
     try {
       const jobs: ParsedJob[] = [];
-      
-      // Regex to capture full blocks ending in CODE: XXXXX
-      const jobBlockRegex = /([\s\S]*?)(?:Apply Here - )?CODE:\s*(\d+)/gi;
-      
+
+      // Ordered longest-first so "Closer OTE" beats plain "OTE" in alternation.
+      const FIELD_KEYS = [
+        "DM Setter OTE",
+        "Recruiter Social",
+        "Closer OTE",
+        "Setter OTE",
+        "Manager OTE",
+        "Biz Social",
+        "CSM OTE",
+        "Website",
+        "Revenue",
+        "Hiring",
+        "Offer",
+        "Email",
+        "Notes",
+        "Name",
+        "Social",
+        "OTE",
+      ];
+      const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const fieldKeyRegex = new RegExp(
+        `\\b(${FIELD_KEYS.map(escapeRe).join("|")}):\\s*`,
+        "gi",
+      );
+
+      // Block boundaries: each job ends with CODE: XXXXX
+      const jobBlockRegex = /([\s\S]*?)(?:Apply Here\s*[-–—]\s*)?CODE:\s*(\d+)/gi;
+
       let match;
       while ((match = jobBlockRegex.exec(text)) !== null) {
-        const blockContent = match[1].trim();
+        const rawBlock = match[1];
         const code = match[2];
-        
-        const lines = blockContent.split("\n").map(l => l.trim()).filter(l => l);
-        
-        if (lines.length === 0) continue;
 
-        // First line is always the title
-        const title = lines[0];
-        
-        // Helper to extract value by key (case-insensitive)
-        const getValue = (key: string) => {
-          const line = lines.find(l => l.toLowerCase().startsWith(`${key.toLowerCase()}:`));
-          return line ? line.substring(key.length + 1).trim() : "";
-        };
+        // Strip leading/trailing separator lines like "-", "---", "===", "—", etc.
+        const blockContent = rawBlock
+          .replace(/^[\s\-–—_=*]+/u, "")
+          .replace(/[\s\-–—_=*]+$/u, "")
+          .trim();
 
-        // Parse all OTE variants into a combined string
-        const mainOte = getValue("OTE");
-        const closerOte = getValue("Closer OTE");
-        const csmOte = getValue("CSM OTE");
-        const setterOte = getValue("Setter OTE");
-        const dmSetterOte = getValue("DM Setter OTE");
-        const managerOte = getValue("Manager OTE");
+        if (!blockContent) continue;
+
+        // Find all field keys in the block (works regardless of newlines)
+        const keyMatches = [...blockContent.matchAll(fieldKeyRegex)];
+
+        // Title = first non-empty line of whatever comes before the first field key.
+        // Falls back to first line of the whole block if no keys were found.
+        const preKey = keyMatches.length > 0
+          ? blockContent.slice(0, keyMatches[0].index ?? 0)
+          : blockContent;
+        const title = preKey
+          .split("\n")
+          .map(l => l.trim())
+          .filter(Boolean)[0] ?? "";
+
+        // Build fieldMap by slicing the block between consecutive key starts.
+        const fieldMap: Record<string, string> = {};
+        for (let i = 0; i < keyMatches.length; i++) {
+          const current = keyMatches[i];
+          const key = current[1].toLowerCase();
+          const valueStart = (current.index ?? 0) + current[0].length;
+          const next = keyMatches[i + 1];
+          const valueEnd = next ? (next.index ?? blockContent.length) : blockContent.length;
+          fieldMap[key] = blockContent.slice(valueStart, valueEnd).trim();
+        }
+        const get = (k: string) => fieldMap[k.toLowerCase()] ?? "";
 
         jobs.push({
           title,
-          name: getValue("Name"),
-          email: getValue("Email"),
-          website: getValue("Website"),
-          social: getValue("Social") || getValue("Biz Social"),
-          recruiterSocial: getValue("Recruiter Social"),
-          offer: getValue("Offer"),
-          revenue: getValue("Revenue"),
-          hiring: getValue("Hiring"),
-          ote: mainOte,
-          closerOte,
-          csmOte,
-          setterOte,
-          dmSetterOte,
-          managerOte,
-          notes: getValue("Notes"),
+          name: get("Name"),
+          email: get("Email"),
+          website: get("Website"),
+          social: get("Social") || get("Biz Social"),
+          recruiterSocial: get("Recruiter Social"),
+          offer: get("Offer"),
+          revenue: get("Revenue"),
+          hiring: get("Hiring"),
+          ote: get("OTE"),
+          closerOte: get("Closer OTE"),
+          csmOte: get("CSM OTE"),
+          setterOte: get("Setter OTE"),
+          dmSetterOte: get("DM Setter OTE"),
+          managerOte: get("Manager OTE"),
+          notes: get("Notes"),
           code,
         });
       }
 
       setParsedJobs(jobs);
       if (jobs.length === 0) {
-        setError("No job offers found. Make sure the document ends each job with CODE: XXXXX");
+        setError("No job offers found. Make sure each job ends with CODE: XXXXX");
       }
     } catch (err) {
       console.error(err);
@@ -109,17 +146,29 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      setFile(selectedFile);
-      setParsing(true);
-      setError("");
+      const lower = selectedFile.name.toLowerCase();
 
+      // .doc (legacy binary) is unsupported — mammoth only handles .docx
+      // and reading .doc as text yields binary garbage.
+      if (lower.endsWith(".doc")) {
+        setError(
+          "Formato .doc antiguo no soportado. Abrí el archivo en Word y guardalo como .docx (o exportalo a .txt).",
+        );
+        return;
+      }
+      if (!lower.endsWith(".docx") && !lower.endsWith(".txt")) {
+        setError("Formato no soportado. Subí un archivo .docx o .txt.");
+        return;
+      }
+
+      setFile(selectedFile);
       setParsing(true);
       setError("");
 
       try {
         let text = "";
-        
-        if (selectedFile.name.endsWith(".docx")) {
+
+        if (lower.endsWith(".docx")) {
           const arrayBuffer = await selectedFile.arrayBuffer();
           const result = await mammoth.extractRawText({ arrayBuffer });
           text = result.value;
@@ -127,7 +176,6 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
             console.warn("Mammoth messages:", result.messages);
           }
         } else {
-          // Fallback for txt
           text = await selectedFile.text();
         }
 
