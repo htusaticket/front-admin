@@ -1,15 +1,16 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Trash2, Mic, HelpCircle, Loader2 } from "lucide-react";
+import { X, Plus, Trash2, Mic, HelpCircle, Loader2, Pencil } from "lucide-react";
 import { useState } from "react";
 
 import { useModalLock } from "@/hooks/useModalLock";
-import { useChallengesStore } from "@/store/challenges";
+import { useChallengesStore, type Challenge } from "@/store/challenges";
 
 interface CreateChallengeModalProps {
   isOpen: boolean;
   onClose: () => void;
+  challenge?: Challenge | null;
 }
 
 interface Question {
@@ -19,22 +20,70 @@ interface Question {
     correctAnswer: number;
 }
 
-export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalProps) {
-  useModalLock(isOpen, onClose);
-  const { createChallenge, isSaving } = useChallengesStore();
-  
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    date: "",
-    type: "AUDIO" as "AUDIO" | "MULTIPLE_CHOICE",
-    visibleForSkillBuilder: false,
-    visibleForSkillBuilderLive: false,
-    audioUrl: "",
-    questions: [
-      { id: 1, text: "", options: ["", "", ""], correctAnswer: -1 },
-    ] as Question[],
-  });
+const emptyForm = () => ({
+  title: "",
+  description: "",
+  date: "",
+  type: "AUDIO" as "AUDIO" | "MULTIPLE_CHOICE",
+  visibleForSkillBuilder: false,
+  visibleForSkillBuilderLive: false,
+  audioUrl: "",
+  questions: [
+    { id: 1, text: "", options: ["", "", ""], correctAnswer: -1 },
+  ] as Question[],
+});
+
+const localToday = () => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+export function CreateChallengeModal({ isOpen, onClose, challenge }: CreateChallengeModalProps) {
+  const isEdit = Boolean(challenge);
+  const { createChallenge, updateChallenge, isSaving } = useChallengesStore();
+
+  // Derive initial form data from the (possibly null) challenge prop.
+  const buildFormFromChallenge = (c: Challenge | null | undefined) => {
+    if (!c) return emptyForm();
+    return {
+      title: c.title,
+      description: c.description,
+      date: c.scheduledDate,
+      type: c.type,
+      visibleForSkillBuilder: c.visibleForSkillBuilder,
+      visibleForSkillBuilderLive: c.visibleForSkillBuilderLive,
+      audioUrl: c.audioUrl ?? "",
+      questions:
+        c.quizQuestions && c.quizQuestions.length > 0
+          ? c.quizQuestions.map((q, i) => ({
+            id: i + 1,
+            text: q.question,
+            options: q.options,
+            correctAnswer: q.correctAnswer,
+          }))
+          : [{ id: 1, text: "", options: ["", "", ""], correctAnswer: -1 }],
+    };
+  };
+
+  const [formData, setFormData] = useState(() => buildFormFromChallenge(challenge));
+  // Reset form state when the open state or target challenge changes.
+  // Using the "track-previous" pattern (https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes).
+  const openKey = isOpen ? (challenge?.id ?? "new") : "closed";
+  const [lastOpenKey, setLastOpenKey] = useState(openKey);
+  if (openKey !== lastOpenKey) {
+    setLastOpenKey(openKey);
+    setFormData(buildFormFromChallenge(isOpen ? challenge : null));
+  }
+
+  const resetAndClose = () => {
+    setFormData(emptyForm());
+    onClose();
+  };
+
+  useModalLock(isOpen, resetAndClose);
 
   // Question Management
   const addQuestion = () => {
@@ -95,19 +144,19 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate date is not in the past (parse as local date to avoid UTC issues)
+    // Validate date is not in the past (user local). Edit allows keeping original date.
     const [y, m, d] = formData.date.split("-").map(Number);
     const selectedDate = new Date(y, m - 1, d);
     selectedDate.setHours(0, 0, 0, 0);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (selectedDate < today) {
+    const isSameAsOriginal = isEdit && challenge && challenge.scheduledDate === formData.date;
+    if (!isSameAsOriginal && selectedDate < today) {
       alert("No se pueden crear challenges para fechas pasadas");
       return;
     }
 
     if (formData.type === "MULTIPLE_CHOICE") {
-      // Validate all questions
       for (let i = 0; i < formData.questions.length; i++) {
         const q = formData.questions[i];
         if (!q.text.trim()) {
@@ -125,8 +174,7 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
       }
     }
 
-    // Prepare data for API
-    const challengeData = {
+    const payload = {
       title: formData.title,
       description: formData.description,
       scheduledDate: formData.date,
@@ -134,7 +182,7 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
       visibleForSkillBuilder: formData.visibleForSkillBuilder,
       visibleForSkillBuilderLive: formData.visibleForSkillBuilderLive,
       audioUrl: formData.type === "AUDIO" ? formData.audioUrl : undefined,
-      quizQuestions: formData.type === "MULTIPLE_CHOICE" 
+      quizQuestions: formData.type === "MULTIPLE_CHOICE"
         ? formData.questions.map(q => ({
           question: q.text,
           options: q.options,
@@ -142,22 +190,13 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
         }))
         : undefined,
     };
-    
-    const result = await createChallenge(challengeData);
-    
+
+    const result = isEdit && challenge
+      ? await updateChallenge(challenge.id, payload)
+      : await createChallenge(payload);
+
     if (result.success) {
-      // Reset form only on success
-      setFormData({
-        title: "",
-        description: "",
-        date: "",
-        type: "AUDIO",
-        visibleForSkillBuilder: false,
-        visibleForSkillBuilderLive: false,
-        audioUrl: "",
-        questions: [{ id: 1, text: "", options: ["", "", ""], correctAnswer: -1 }],
-      });
-      
+      setFormData(emptyForm());
       onClose();
     }
   };
@@ -170,7 +209,6 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -180,8 +218,8 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-              <h2 className="font-display text-lg font-bold text-gray-900">New Daily Challenge</h2>
-              <button onClick={onClose} className="rounded-full p-2 hover:bg-gray-100">
+              <h2 className="font-display text-lg font-bold text-gray-900">{isEdit ? "Edit Daily Challenge" : "New Daily Challenge"}</h2>
+              <button onClick={resetAndClose} className="rounded-full p-2 hover:bg-gray-100">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -195,8 +233,8 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                     type="button"
                     onClick={() => setFormData({...formData, type: "AUDIO"})}
                     className={`flex items-center justify-center gap-2 rounded-xl border p-3 transition-all ${
-                      formData.type === "AUDIO" 
-                        ? "border-brand-primary bg-brand-primary/5 text-brand-primary font-bold" 
+                      formData.type === "AUDIO"
+                        ? "border-brand-primary bg-brand-primary/5 text-brand-primary font-bold"
                         : "border-gray-200 hover:bg-gray-50 text-gray-600"
                     }`}
                   >
@@ -207,8 +245,8 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                     type="button"
                     onClick={() => setFormData({...formData, type: "MULTIPLE_CHOICE"})}
                     className={`flex items-center justify-center gap-2 rounded-xl border p-3 transition-all ${
-                      formData.type === "MULTIPLE_CHOICE" 
-                        ? "border-brand-primary bg-brand-primary/5 text-brand-primary font-bold" 
+                      formData.type === "MULTIPLE_CHOICE"
+                        ? "border-brand-primary bg-brand-primary/5 text-brand-primary font-bold"
                         : "border-gray-200 hover:bg-gray-50 text-gray-600"
                     }`}
                   >
@@ -222,8 +260,8 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
               <div className="space-y-4">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">Title</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     required
                     className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-brand-primary"
                     placeholder={formData.type === "AUDIO" ? "e.g. Listen to Podcast" : "e.g. Weekly Quiz"}
@@ -234,11 +272,11 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">Description</label>
-                  <textarea 
+                  <textarea
                     required
-                    rows={2}
-                    className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-brand-primary"
-                    placeholder="General instructions..."
+                    rows={4}
+                    className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-brand-primary whitespace-pre-line"
+                    placeholder="General instructions... (los saltos de línea se conservan)"
                     value={formData.description}
                     onChange={e => setFormData({...formData, description: e.target.value})}
                   />
@@ -246,10 +284,10 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">Date</label>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     required
-                    min={new Date().toISOString().split("T")[0]}
+                    min={isEdit ? undefined : localToday()}
                     className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-brand-primary"
                     value={formData.date}
                     onChange={e => setFormData({...formData, date: e.target.value})}
@@ -299,7 +337,7 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                   <div className="space-y-6 pt-4 border-t border-gray-100">
                     <div className="flex items-center justify-between">
                       <label className="block text-sm font-bold text-gray-900">Questions</label>
-                      <button 
+                      <button
                         type="button"
                         onClick={addQuestion}
                         className="text-xs font-bold text-brand-primary hover:bg-brand-primary/5 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
@@ -308,10 +346,10 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                                    Add Question
                       </button>
                     </div>
-                           
+
                     <div className="space-y-4">
                       {formData.questions.map((q, qIndex) => (
-                        <motion.div 
+                        <motion.div
                           key={q.id}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -319,7 +357,7 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                         >
                           <div className="flex items-start gap-4">
                             <div className="flex-1 space-y-3">
-                              <input 
+                              <input
                                 type="text"
                                 required
                                 placeholder={`Question ${qIndex + 1} text`}
@@ -327,7 +365,7 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                                 value={q.text}
                                 onChange={(e) => updateQuestion(qIndex, "text", e.target.value)}
                               />
-                                              
+
                               <div className="pl-2 space-y-2 border-l-2 border-gray-200">
                                 {q.options.map((opt, oIndex) => (
                                   <div
@@ -344,7 +382,7 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                                         className="accent-brand-primary h-4 w-4 cursor-pointer"
                                       />
                                     </div>
-                                    <input 
+                                    <input
                                       type="text"
                                       value={opt}
                                       onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
@@ -352,8 +390,8 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                                       className="flex-1 rounded-lg border border-gray-200 p-2 text-sm outline-none focus:border-brand-primary bg-white"
                                     />
                                     {q.options.length > 2 && (
-                                      <button 
-                                        type="button" 
+                                      <button
+                                        type="button"
                                         onClick={() => removeOption(qIndex, oIndex)}
                                         className="p-2 text-gray-400 hover:text-red-500"
                                       >
@@ -362,8 +400,8 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                                     )}
                                   </div>
                                 ))}
-                                <button 
-                                  type="button" 
+                                <button
+                                  type="button"
                                   onClick={() => addOption(qIndex)}
                                   className="text-xs font-semibold text-gray-500 hover:text-brand-primary flex items-center gap-1 mt-1 ml-6"
                                 >
@@ -372,10 +410,10 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
                                 </button>
                               </div>
                             </div>
-                                          
+
                             {formData.questions.length > 1 && (
-                              <button 
-                                type="button" 
+                              <button
+                                type="button"
                                 onClick={() => removeQuestion(qIndex)}
                                 className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                               >
@@ -391,16 +429,18 @@ export function CreateChallengeModal({ isOpen, onClose }: CreateChallengeModalPr
               </AnimatePresence>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                <button type="button" onClick={onClose} disabled={isSaving} className="rounded-xl px-4 py-2 font-semibold text-gray-600 hover:bg-gray-200 disabled:opacity-50">
+                <button type="button" onClick={resetAndClose} disabled={isSaving} className="rounded-xl px-4 py-2 font-semibold text-gray-600 hover:bg-gray-200 disabled:opacity-50">
                       Cancel
                 </button>
                 <button type="submit" disabled={isSaving} className="flex items-center gap-2 rounded-xl bg-brand-primary px-6 py-2 font-bold text-white transition-all hover:bg-brand-primary/90 disabled:opacity-50">
                   {isSaving ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : isEdit ? (
+                    <Pencil className="h-4 w-4" />
                   ) : (
                     <Plus className="h-4 w-4" />
                   )}
-                  {isSaving ? "Creating..." : "Create Challenge"}
+                  {isSaving ? (isEdit ? "Saving..." : "Creating...") : isEdit ? "Save Changes" : "Create Challenge"}
                 </button>
               </div>
             </form>

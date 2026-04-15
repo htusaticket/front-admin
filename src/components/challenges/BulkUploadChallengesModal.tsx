@@ -42,6 +42,17 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
   const VALID_TYPES = ["Audio", "MultipleChoice", "AUDIO", "MULTIPLE_CHOICE"];
   const MAX_CHALLENGES = 30;
 
+  // Convert common line-break markers into real newlines so the uploader can use any
+  // of these inside an Excel cell: Alt+Enter (already \n), literal "\n", "\\n",
+  // "<br>", "<br/>", or the pipe "|" as a separator.
+  const normalizeLineBreaks = (raw: string): string =>
+    raw
+      .replace(/\r\n/g, "\n")
+      .replace(/\\n/g, "\n")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/\s*\|\s*/g, "\n")
+      .trim();
+
   const normalizeDate = (raw: string | number | undefined): string => {
     if (raw === undefined || raw === null || raw === "") return "";
     // Handle Excel serial date numbers (e.g. 46099)
@@ -152,7 +163,7 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
           if (!challengesMap.has(key)) {
             challengesMap.set(key, {
               title,
-              description: String(row.Description || row.description || ""),
+              description: normalizeLineBreaks(String(row.Description || row.description || "")),
               date,
               type: String(row.Type || row.type || "Audio"),
               questions: [],
@@ -330,7 +341,6 @@ export function BulkUploadChallengesModal({ isOpen, onClose }: BulkUploadChallen
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}

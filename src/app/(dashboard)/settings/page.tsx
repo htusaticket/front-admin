@@ -1,20 +1,22 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { 
-  Settings, 
-  Shield, 
-  ToggleLeft, 
-  ToggleRight, 
-  UserCog, 
-  AlertTriangle, 
-  ChevronRight, 
+import {
+  Settings,
+  Shield,
+  ToggleLeft,
+  ToggleRight,
+  UserCog,
+  AlertTriangle,
+  ChevronRight,
   Users,
   Loader2,
   Save,
+  ImageIcon,
+  Upload,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { toast } from "sonner";
 
 import { useAuthStore } from "@/store/auth";
@@ -36,7 +38,9 @@ const getFormValuesFromConfig = (config: ConfigFormValues | null) => ({
 
 export default function SettingsPage() {
   const { user } = useAuthStore();
-  const { config, isLoading, isSaving, fetchConfig, updateConfig } = useSystemConfigStore();
+  const { config, isLoading, isSaving, fetchConfig, updateConfig, uploadLogo } = useSystemConfigStore();
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const isSuperAdmin = user?.role === "SUPERADMIN";
   
   // Local state for form values (Strike Policy only - needs "Save" button)
@@ -108,6 +112,24 @@ export default function SettingsPage() {
       maxStrikesForPunishment: maxStrikes,
       punishmentDurationDays: punishmentDays,
     });
+  };
+
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+    if (!allowed.includes(file.type)) {
+      toast.error("Formato no permitido. Usa PNG, JPG, WEBP o SVG.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("El logo no puede superar los 5MB.");
+      return;
+    }
+    setIsUploadingLogo(true);
+    await uploadLogo(file);
+    setIsUploadingLogo(false);
+    if (logoInputRef.current) logoInputRef.current.value = "";
   };
 
   const toggleModule = async (moduleKey: "jobBoardEnabled" | "strikesEnabled") => {
@@ -268,6 +290,58 @@ export default function SettingsPage() {
               <span className="px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-700">
                 v1.0.0
               </span>
+            </div>
+
+            {/* Logo upload — se usa en front alumno, admin y emails */}
+            <div className="rounded-xl border border-gray-100 p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-100 text-purple-600">
+                  <ImageIcon className="h-4 w-4" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-sm text-gray-900">Platform Logo</p>
+                  <p className="text-xs text-gray-500">Se usa en el panel admin, front de alumnos y emails. PNG/JPG/WEBP/SVG, máx 5MB.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex h-16 w-24 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 overflow-hidden">
+                  {config?.logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={config.logoUrl} alt="Current logo" className="max-h-full max-w-full object-contain" />
+                  ) : (
+                    <ImageIcon className="h-6 w-6 text-gray-300" />
+                  )}
+                </div>
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  onChange={handleLogoChange}
+                  className="hidden"
+                  disabled={!isSuperAdmin || isUploadingLogo}
+                />
+                <button
+                  type="button"
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={!isSuperAdmin || isUploadingLogo}
+                  className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:border-brand-primary/30 hover:bg-brand-primary/5 disabled:opacity-50"
+                >
+                  {isUploadingLogo ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" />
+                      {config?.logoUrl ? "Replace Logo" : "Upload Logo"}
+                    </>
+                  )}
+                </button>
+              </div>
+              {!isSuperAdmin && (
+                <p className="mt-2 text-xs text-gray-400">Solo SUPERADMIN puede modificar el logo.</p>
+              )}
             </div>
           </div>
         </motion.div>

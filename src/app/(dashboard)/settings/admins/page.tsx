@@ -492,7 +492,6 @@ export default function AdminsManagementPage() {
       {showCreateModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => { setShowCreateModal(false); setError(null); resetForm(); }}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -611,7 +610,6 @@ export default function AdminsManagementPage() {
       {showEditModal && selectedAdmin && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => { setShowEditModal(false); setSelectedAdmin(null); setError(null); resetForm(); }}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -728,7 +726,6 @@ export default function AdminsManagementPage() {
       {showDeleteModal && selectedAdmin && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => { setShowDeleteModal(false); setSelectedAdmin(null); setError(null); }}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -788,7 +785,6 @@ export default function AdminsManagementPage() {
       {showPermanentDeleteModal && selectedAdmin && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => { setShowPermanentDeleteModal(false); setSelectedAdmin(null); setError(null); }}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}

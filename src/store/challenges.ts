@@ -4,9 +4,25 @@ import { create } from "zustand";
 import api, { getErrorMessage } from "@/lib/api";
 import type { ApiResponse } from "@/types/admin";
 
+const getLocalToday = (): string => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
 // Types
 export interface QuizQuestion {
   question: string;
+  options: string[];
+  correctAnswer: number;
+}
+
+// Backend question shape (uses `text`, not `question`)
+interface BackendQuestion {
+  text?: string;
+  question?: string;
   options: string[];
   correctAnswer: number;
 }
@@ -18,7 +34,7 @@ interface BackendChallenge {
   instructions: string;
   type: "AUDIO" | "MULTIPLE_CHOICE";
   date: string; // Backend uses 'date'
-  questions?: QuizQuestion[];
+  questions?: BackendQuestion[];
   audioUrl?: string;
   points: number;
   isActive: boolean;
@@ -56,7 +72,11 @@ const transformChallenge = (backend: BackendChallenge): Challenge => ({
   description: backend.instructions,
   type: backend.type,
   scheduledDate: backend.date.split("T")[0], // Normalize to YYYY-MM-DD
-  quizQuestions: backend.questions,
+  quizQuestions: backend.questions?.map(q => ({
+    question: q.text ?? q.question ?? "",
+    options: q.options,
+    correctAnswer: q.correctAnswer,
+  })),
   audioUrl: backend.audioUrl,
   points: backend.points,
   isActive: backend.isActive,
@@ -219,6 +239,7 @@ export const useChallengesStore = create<ChallengesStore>((set, get) => ({
         points: data.points,
         visibleForSkillBuilder: data.visibleForSkillBuilder,
         visibleForSkillBuilderLive: data.visibleForSkillBuilderLive,
+        userToday: getLocalToday(),
       };
 
       const response = await api.post<ApiResponse<Challenge>>(
@@ -263,7 +284,8 @@ export const useChallengesStore = create<ChallengesStore>((set, get) => ({
         backendData.visibleForSkillBuilderLive = data.visibleForSkillBuilderLive;
       }
       if (data.isActive !== undefined) backendData.isActive = data.isActive;
-      
+      if (data.scheduledDate !== undefined) backendData.userToday = getLocalToday();
+
       const response = await api.put<ApiResponse<Challenge>>(
         `/api/admin/challenges/${id}`,
         backendData,
@@ -336,7 +358,7 @@ export const useChallengesStore = create<ChallengesStore>((set, get) => ({
       
       const response = await api.post<ApiResponse<BulkCreateChallengesResponse>>(
         "/api/admin/challenges/bulk",
-        { challenges: backendChallenges },
+        { challenges: backendChallenges, userToday: getLocalToday() },
       );
       
       const result = response.data.data;

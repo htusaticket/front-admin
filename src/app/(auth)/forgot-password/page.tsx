@@ -7,8 +7,10 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { InputField } from "@/components/auth/FormInputs";
+import { useAppLogo } from "@/hooks/useAppLogo";
 
 export default function ForgotPassword() {
+  const logoUrl = useAppLogo();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -41,7 +43,7 @@ export default function ForgotPassword() {
     >
       <div className="mb-8 flex flex-col items-center text-center">
         <Image
-          src="/logo.webp"
+          src={logoUrl}
           alt="High Ticket English"
           width={100}
           height={100}

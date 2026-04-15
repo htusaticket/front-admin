@@ -13,6 +13,7 @@ export interface SystemConfig {
   lateCancellationHours: number;
   jobBoardEnabled: boolean;
   academyEnabled: boolean;
+  logoUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -24,6 +25,7 @@ export interface UpdateSystemConfigDto {
   lateCancellationHours?: number;
   jobBoardEnabled?: boolean;
   academyEnabled?: boolean;
+  logoUrl?: string | null;
 }
 
 // Response type for update
@@ -44,6 +46,7 @@ interface SystemConfigState {
 interface SystemConfigActions {
   fetchConfig: () => Promise<void>;
   updateConfig: (data: UpdateSystemConfigDto) => Promise<boolean>;
+  uploadLogo: (file: File) => Promise<boolean>;
   clearError: () => void;
 }
 
@@ -86,6 +89,27 @@ export const useSystemConfigStore = create<SystemConfigStore>((set) => ({
       // Backend returns { config, message } so we extract config
       set({ config: response.data.data.config, isSaving: false });
       toast.success("Configuration updated successfully");
+      return true;
+    } catch (error) {
+      const message = getErrorMessage(error);
+      set({ error: message, isSaving: false });
+      toast.error(message);
+      return false;
+    }
+  },
+
+  uploadLogo: async (file) => {
+    set({ isSaving: true, error: null });
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const response = await api.post<ApiResponse<SystemConfig>>(
+        "/api/admin/system-config/logo",
+        form,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      set({ config: response.data.data, isSaving: false });
+      toast.success("Logo actualizado");
       return true;
     } catch (error) {
       const message = getErrorMessage(error);

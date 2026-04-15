@@ -8,11 +8,13 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
 import { InputField, PasswordField } from "@/components/auth/FormInputs";
+import { useAppLogo } from "@/hooks/useAppLogo";
 import { useAuthStore } from "@/store/auth";
 
 export default function Login() {
   const router = useRouter();
   const { login, isLoading, error, errorCode, clearError } = useAuthStore();
+  const logoUrl = useAppLogo();
 
   // Redirigir si ya está autenticado
   useEffect(() => {
@@ -105,7 +107,7 @@ export default function Login() {
     >
       <div className="mb-8 flex flex-col items-center text-center">
         <Image
-          src="/logo.webp"
+          src={logoUrl}
           alt="JFalcon Admin"
           width={100}
           height={100}

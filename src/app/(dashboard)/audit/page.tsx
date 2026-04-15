@@ -269,61 +269,61 @@ export default function AuditPage() {
         ) : (
           <>
             <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Admin</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Acción</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Objetivo</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Fecha</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Detalles</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary font-bold text-xs">
-                          {log.adminName.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-900 block">{log.adminName}</span>
-                          <span className="text-xs text-gray-500">{log.adminEmail}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${getActionStyle(log.action)}`}>
-                        {(log.action.includes("DELETE") || log.action.includes("REJECT") || log.action.includes("SUSPEND") || log.action.includes("STRIKE")) && (
-                          <ShieldAlert className="h-3 w-3" />
-                        )}
-                        {actionLabels[log.action] || log.action}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {log.targetName || log.targetType || "-"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 flex items-center gap-2">
-                      <Calendar className="h-3.5 w-3.5" />
-                      {format(new Date(log.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {log.details && Object.keys(log.details).length > 0 ? (
-                        <button
-                          onClick={() => setSelectedLog(log)}
-                          className="text-sm text-brand-primary font-medium hover:underline"
-                        >
-                          Ver detalles
-                        </button>
-                      ) : (
-                        <span className="text-sm text-gray-400">-</span>
-                      )}
-                    </td>
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Admin</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Acción</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Objetivo</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Fecha</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Detalles</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {logs.map((log) => (
+                    <tr key={log.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary font-bold text-xs">
+                            {log.adminName.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-gray-900 block">{log.adminName}</span>
+                            <span className="text-xs text-gray-500">{log.adminEmail}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${getActionStyle(log.action)}`}>
+                          {(log.action.includes("DELETE") || log.action.includes("REJECT") || log.action.includes("SUSPEND") || log.action.includes("STRIKE")) && (
+                            <ShieldAlert className="h-3 w-3" />
+                          )}
+                          {actionLabels[log.action] || log.action}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {log.targetName || log.targetType || "-"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 flex items-center gap-2">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {format(new Date(log.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {log.details && Object.keys(log.details).length > 0 ? (
+                          <button
+                            onClick={() => setSelectedLog(log)}
+                            className="text-sm text-brand-primary font-medium hover:underline"
+                          >
+                          Ver detalles
+                          </button>
+                        ) : (
+                          <span className="text-sm text-gray-400">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
             <Pagination
@@ -341,7 +341,6 @@ export default function AuditPage() {
       {selectedLog && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => setSelectedLog(null)}
         >
           <div 
             className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"

@@ -610,61 +610,61 @@ export default function UserDetailPage() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
             {user.academyProgress && user.academyProgress.length > 0 ? (
               <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Module</th>
-                    <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Progress</th>
-                    <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {user.academyProgress.map((progress) => {
-                    const status = progress.progress === 100
-                      ? "Completed"
-                      : progress.progress > 0
-                        ? "In Progress"
-                        : "Not Started";
-                    return (
-                      <tr key={progress.courseId}>
-                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                          {progress.courseName}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          <div className="flex items-center gap-3">
-                            <div className="w-full max-w-[120px] h-2 bg-gray-100 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${
-                                  progress.progress === 100
-                                    ? "bg-green-500"
-                                    : progress.progress > 0
-                                      ? "bg-brand-primary"
-                                      : "bg-gray-200"
-                                }`}
-                                style={{ width: `${progress.progress}%` }}
-                              />
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Module</th>
+                      <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Progress</th>
+                      <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {user.academyProgress.map((progress) => {
+                      const status = progress.progress === 100
+                        ? "Completed"
+                        : progress.progress > 0
+                          ? "In Progress"
+                          : "Not Started";
+                      return (
+                        <tr key={progress.courseId}>
+                          <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                            {progress.courseName}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">
+                            <div className="flex items-center gap-3">
+                              <div className="w-full max-w-[120px] h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    progress.progress === 100
+                                      ? "bg-green-500"
+                                      : progress.progress > 0
+                                        ? "bg-brand-primary"
+                                        : "bg-gray-200"
+                                  }`}
+                                  style={{ width: `${progress.progress}%` }}
+                                />
+                              </div>
+                              <span className="text-xs font-semibold text-gray-600 min-w-[40px]">
+                                {progress.progress}%
+                              </span>
                             </div>
-                            <span className="text-xs font-semibold text-gray-600 min-w-[40px]">
-                              {progress.progress}%
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4">
+                            <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              status === "Completed"
+                                ? "bg-green-100 text-green-800"
+                                : status === "In Progress"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-gray-100 text-gray-500"
+                            }`}>
+                              {status}
                             </span>
-                          </div>
-                        </td>
-                        <td className="whitespace-nowrap px-6 py-4">
-                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            status === "Completed"
-                              ? "bg-green-100 text-green-800"
-                              : status === "In Progress"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-gray-100 text-gray-500"
-                          }`}>
-                            {status}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>              </div>            ) : (
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>              </div>            ) : (
               <div className="p-8 text-center text-gray-500">
                 No academy progress yet
               </div>
@@ -678,34 +678,34 @@ export default function UserDetailPage() {
             {paginatedEnrollments.length > 0 ? (
               <>
                 <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Class</th>
-                      <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Type</th>
-                      <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {paginatedEnrollments.map((enrollment) => (
-                      <tr key={enrollment.id}>
-                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                          {formatDate(enrollment.classSession.scheduledAt)}
-                        </td>
-                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                          {enrollment.classSession.topic}
-                        </td>
-                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                          {enrollment.classSession.type}
-                        </td>
-                        <td className="whitespace-nowrap px-6 py-4">
-                          {getAttendanceBadge(enrollment.attendanceStatus)}
-                        </td>
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Class</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Type</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Status</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {paginatedEnrollments.map((enrollment) => (
+                        <tr key={enrollment.id}>
+                          <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                            {formatDate(enrollment.classSession.scheduledAt)}
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                            {enrollment.classSession.topic}
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                            {enrollment.classSession.type}
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4">
+                            {getAttendanceBadge(enrollment.attendanceStatus)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
                 <Pagination 
                   currentPage={classesPage}
@@ -786,38 +786,38 @@ export default function UserDetailPage() {
             {user.strikes?.history && user.strikes.history.length > 0 ? (
               <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Reason</th>
-                      <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Related Class</th>
-                      <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Type</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {user.strikes.history.map((strike) => (
-                      <tr key={strike.id}>
-                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                          {formatDate(strike.createdAt)}
-                        </td>
-                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
-                          {strike.reason}
-                        </td>
-                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                          {strike.classTitle || "-"}
-                        </td>
-                        <td className="whitespace-nowrap px-6 py-4">
-                          <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                            strike.isManual ? "bg-purple-100 text-purple-800" : "bg-amber-100 text-amber-800"
-                          }`}>
-                            {strike.isManual ? "Manual" : "Auto"}
-                          </span>
-                        </td>
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Reason</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Related Class</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Type</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {user.strikes.history.map((strike) => (
+                        <tr key={strike.id}>
+                          <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                            {formatDate(strike.createdAt)}
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                            {strike.reason}
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                            {strike.classTitle || "-"}
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4">
+                            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                              strike.isManual ? "bg-purple-100 text-purple-800" : "bg-amber-100 text-amber-800"
+                            }`}>
+                              {strike.isManual ? "Manual" : "Auto"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             ) : (
@@ -864,7 +864,6 @@ export default function UserDetailPage() {
       {isDeleteModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-          onClick={() => !isDeleting && setIsDeleteModalOpen(false)}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}

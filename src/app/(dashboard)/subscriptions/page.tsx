@@ -566,7 +566,6 @@ export default function SubscriptionsPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            onClick={() => setShowCreateModal(false)}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
@@ -752,7 +751,6 @@ export default function SubscriptionsPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            onClick={() => setShowEditModal(false)}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
@@ -910,7 +908,6 @@ export default function SubscriptionsPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            onClick={() => setShowDeleteModal(false)}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
@@ -969,7 +966,6 @@ export default function SubscriptionsPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            onClick={() => setShowCancelModal(false)}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}

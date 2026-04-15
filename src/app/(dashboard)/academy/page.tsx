@@ -214,7 +214,6 @@ export default function AcademyPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            onClick={() => setModuleToDelete(null)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}

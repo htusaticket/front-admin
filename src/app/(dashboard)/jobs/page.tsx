@@ -15,6 +15,8 @@ import {
   Globe,
   ExternalLink,
   Mail,
+  MapPin,
+  DollarSign,
 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 
@@ -64,7 +66,7 @@ export default function JobsPage() {
   const [filterStatus, setFilterStatus] = useState("");
   const [page, setPage] = useState(1);
   const [knownTypes, setKnownTypes] = useState<Set<string>>(new Set());
-  const itemsPerPage = 12;
+  const itemsPerPage = 10;
   
   const isSuperAdmin = user?.role === "SUPERADMIN";
 
@@ -258,7 +260,7 @@ export default function JobsPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search jobs..."
+            placeholder="Search by title, company, code..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="h-12 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-4 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
@@ -293,90 +295,98 @@ export default function JobsPage() {
       ) : (
         <>
           {/* Job Board */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {/* Job List */}
-            <div className="space-y-4 lg:col-span-1">
-              {filteredJobs.map((job) => (
-                <motion.div
-                  key={job.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  onClick={() => setSelectedJob(job)}
-                  className={`cursor-pointer rounded-2xl border bg-white p-4 shadow-sm transition-all hover:shadow-md ${
-                    selectedJob?.id === job.id
-                      ? "border-brand-cyan-dark"
-                      : "border-gray-200"
-                  }`}
-                >
-                  <div className="mb-3 flex items-start justify-between gap-2">
-                    <h3 className="flex-1 font-bold text-brand-primary">
-                      {job.title}
-                    </h3>
-                    {job.code && (
-                      <span className="shrink-0 rounded-md bg-brand-primary/10 px-2 py-0.5 text-xs font-bold text-brand-primary">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
+            {/* Job List — paginated (max 10) and scrollable */}
+            <div className="lg:col-span-1 flex flex-col gap-3">
+              <div className="space-y-4 overflow-y-auto pr-2 max-h-[calc(100vh-16rem)]">
+                {filteredJobs.map((job) => (
+                  <motion.div
+                    key={job.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    onClick={() => setSelectedJob(job)}
+                    className={`cursor-pointer rounded-2xl border bg-white p-4 shadow-sm transition-all hover:shadow-md ${
+                      selectedJob?.id === job.id
+                        ? "border-brand-cyan-dark"
+                        : "border-gray-200"
+                    }`}
+                  >
+                    <div className="mb-3 flex items-start justify-between gap-2">
+                      <h3 className="flex-1 font-bold text-brand-primary">
+                        {job.title}
+                      </h3>
+                      {job.code && (
+                        <span className="shrink-0 rounded-md bg-brand-primary/10 px-2 py-0.5 text-xs font-bold text-brand-primary">
                         CODE: {job.code}
-                      </span>
-                    )}
-                  </div>
-                  <p className="mb-2 text-sm font-semibold text-gray-700">
-                    {job.company}
-                  </p>
-                  <div className="space-y-1 text-xs text-gray-600">
-                    {job.social && (
-                      <a
-                        href={job.social.startsWith("http") ? job.social : `https://${job.social}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-2 text-brand-primary hover:underline"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        Social
-                      </a>
-                    )}
-                    {job.recruiterSocial && (
-                      <a
-                        href={job.recruiterSocial.startsWith("http") ? job.recruiterSocial : `https://${job.recruiterSocial}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-2 text-purple-600 hover:underline"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        Recruiter
-                      </a>
-                    )}
-                    {job.website && (
-                      <a
-                        href={job.website.startsWith("http") ? job.website : `https://${job.website}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-2 text-brand-primary hover:underline"
-                      >
-                        <Globe className="h-3.5 w-3.5" />
-                        Website
-                      </a>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <span className="line-clamp-1">{formatSalary(job)}</span>
+                        </span>
+                      )}
                     </div>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between">
-                    <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                      {job.type}
-                    </span>
-                    <span className={`text-xs font-medium ${job.isActive ? "text-green-600" : "text-gray-400"}`}>
-                      {job.isActive ? "Active" : "Inactive"}
-                    </span>
-                  </div>
-                </motion.div>
-              ))}
+                    <p className="mb-2 text-sm font-semibold text-gray-700">
+                      {job.company}
+                    </p>
+                    <div className="space-y-1 text-xs text-gray-600">
+                      {job.social && (
+                        <a
+                          href={job.social.startsWith("http") ? job.social : `https://${job.social}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-2 text-brand-primary hover:underline"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        Social
+                        </a>
+                      )}
+                      {job.recruiterSocial && (
+                        <a
+                          href={job.recruiterSocial.startsWith("http") ? job.recruiterSocial : `https://${job.recruiterSocial}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-2 text-purple-600 hover:underline"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        Recruiter
+                        </a>
+                      )}
+                      {job.website && (
+                        <a
+                          href={job.website.startsWith("http") ? job.website : `https://${job.website}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-2 text-brand-primary hover:underline"
+                        >
+                          <Globe className="h-3.5 w-3.5" />
+                        Website
+                        </a>
+                      )}
+                      {job.location && (
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-3.5 w-3.5" />
+                          <span className="line-clamp-1">{job.location}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="line-clamp-1">{formatSalary(job)}</span>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                        {job.type}
+                      </span>
+                      <span className={`text-xs font-medium ${job.isActive ? "text-green-600" : "text-gray-400"}`}>
+                        {job.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
 
-            {/* Job Detail */}
+            {/* Job Detail — fixed/sticky on desktop while list scrolls */}
             {selectedJob && (
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-2 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
                 <motion.div
                   key={selectedJob.id}
                   initial={{ opacity: 0, x: 20 }}
@@ -408,6 +418,12 @@ export default function JobsPage() {
                     </div>
 
                     <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                      {selectedJob.location && (
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-gray-400" />
+                          <span>{selectedJob.location}</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2">
                         <span>{formatSalary(selectedJob)}</span>
                       </div>
@@ -415,6 +431,12 @@ export default function JobsPage() {
                         <Briefcase className="h-4 w-4 text-gray-400" />
                         <span>{selectedJob.type}</span>
                       </div>
+                      {selectedJob.revenue ? (
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4 text-gray-400" />
+                          <span>${selectedJob.revenue.toLocaleString()}/Mo revenue</span>
+                        </div>
+                      ) : null}
                       {selectedJob.social && (
                         <a
                           href={selectedJob.social.startsWith("http") ? selectedJob.social : `https://${selectedJob.social}`}

@@ -15,6 +15,7 @@ interface UploadJobsModalProps {
 
 interface ParsedJob {
   title: string;
+  intro: string;
   name: string;
   email: string;
   website: string;
@@ -23,6 +24,7 @@ interface ParsedJob {
   offer: string;
   revenue: string;
   hiring: string;
+  niches: string;
   ote: string;
   closerOte: string;
   csmOte: string;
@@ -58,6 +60,7 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
         "Website",
         "Revenue",
         "Hiring",
+        "Niches",
         "Offer",
         "Email",
         "Notes",
@@ -95,10 +98,10 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
         const preKey = keyMatches.length > 0
           ? blockContent.slice(0, keyMatches[0].index ?? 0)
           : blockContent;
-        const title = preKey
-          .split("\n")
-          .map(l => l.trim())
-          .filter(Boolean)[0] ?? "";
+        const preLines = preKey.split("\n").map(l => l.trim()).filter(Boolean);
+        const title = preLines[0] ?? "";
+        // Everything after the title but before the first field key (intro paragraph).
+        const intro = preLines.slice(1).join("\n").trim();
 
         // Build fieldMap by slicing the block between consecutive key starts.
         const fieldMap: Record<string, string> = {};
@@ -111,17 +114,24 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
           fieldMap[key] = blockContent.slice(valueStart, valueEnd).trim();
         }
         const get = (k: string) => fieldMap[k.toLowerCase()] ?? "";
+        // Single-line fields: truncate at first line break / whitespace run so random
+        // trailing content (e.g. "List of New Roles - https://...") doesn't leak in.
+        const getFirstLine = (k: string) => get(k).split(/\r?\n/)[0]?.trim() ?? "";
+        // For pure tokens (email, url): grab the first whitespace-delimited token.
+        const getToken = (k: string) => getFirstLine(k).split(/\s+/)[0] ?? "";
 
         jobs.push({
           title,
-          name: get("Name"),
-          email: get("Email"),
-          website: get("Website"),
-          social: get("Social") || get("Biz Social"),
-          recruiterSocial: get("Recruiter Social"),
+          intro,
+          name: getFirstLine("Name"),
+          email: getToken("Email"),
+          website: getToken("Website"),
+          social: getToken("Social") || getToken("Biz Social"),
+          recruiterSocial: getToken("Recruiter Social"),
           offer: get("Offer"),
           revenue: get("Revenue"),
           hiring: get("Hiring"),
+          niches: get("Niches"),
           ote: get("OTE"),
           closerOte: get("Closer OTE"),
           csmOte: get("CSM OTE"),
@@ -199,8 +209,21 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
       ].filter(Boolean);
       const allOteNumbers: number[] = [];
       for (const oteStr of allOteStrings) {
-        const nums = oteStr.match(/[\d,]+/g)?.map(n => parseInt(n.replace(/,/g, ""), 10)).filter(n => !isNaN(n));
-        if (nums) allOteNumbers.push(...nums);
+        // Match numbers optionally followed by "k"/"K" (shorthand for thousands).
+        // e.g. "$2k" → 2000, "$4,000" → 4000, "$20,000" → 20000.
+        const matches = oteStr.match(/\$?\s*(\d{1,3}(?:,\d{3})*|\d+)(?:\.\d+)?\s*([kK])?/g) ?? [];
+        for (const raw of matches) {
+          const m = raw.match(/(\d{1,3}(?:,\d{3})*|\d+)(?:\.\d+)?\s*([kK])?/);
+          if (!m) continue;
+          let n = parseFloat(m[1].replace(/,/g, ""));
+          if (isNaN(n)) continue;
+          if (m[2]) n *= 1000; // "k" suffix → thousands
+          // Filter out obvious noise: a lone "2" next to no unit is almost always
+          // shorthand for $2k that the uploader forgot to annotate, or a stray number
+          // from "base", "6 months", etc. Drop anything under $100 as OTE.
+          if (n < 100) continue;
+          allOteNumbers.push(Math.round(n));
+        }
       }
 
       let oteMin: number | undefined;
@@ -241,12 +264,24 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
 
       // Build clean description
       const descParts: string[] = [];
-      if (job.offer) descParts.push(job.offer);
+      if (job.intro) descParts.push(job.intro);
+      if (job.offer) {
+        if (descParts.length) descParts.push("");
+        descParts.push(job.offer);
+      }
+      if (job.hiring) {
+        if (descParts.length) descParts.push("");
+        descParts.push(`Hiring: ${job.hiring}`);
+      }
       if (job.revenue) descParts.push(`Revenue: ${job.revenue}`);
       if (oteParts.length > 0) {
         descParts.push("");
         descParts.push("Compensation Breakdown:");
         descParts.push(...oteParts);
+      }
+      if (job.niches) {
+        descParts.push("");
+        descParts.push(`Niches: ${job.niches}`);
       }
       if (job.notes) {
         descParts.push("");
@@ -287,7 +322,6 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
         >
           <motion.div

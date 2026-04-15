@@ -23,6 +23,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useState, useEffect } from "react";
 
+import { useAppLogo } from "@/hooks/useAppLogo";
 import { useAuthStore } from "@/store/auth";
 import { useSystemConfigStore } from "@/store/systemConfig";
 
@@ -66,12 +67,14 @@ const SidebarContent = ({
   onLogout,
   userRole,
   jobBoardEnabled,
+  logoUrl,
 }: {
   pathname: string;
   onClose?: () => void;
   onLogout: () => void;
   userRole: string;
   jobBoardEnabled: boolean;
+  logoUrl: string;
 }) => {
   // Filter menu items based on user role
   const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
@@ -87,7 +90,7 @@ const SidebarContent = ({
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-black">
             <Image
-              src="https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png"
+              src={logoUrl}
               alt="High Ticket USA"
               width={40}
               height={40}
@@ -185,6 +188,7 @@ export const Sidebar = () => {
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
   const { config, fetchConfig } = useSystemConfigStore();
+  const logoUrl = useAppLogo();
   
   // Use user role from store, fallback to cookie, then to SUPERADMIN (safest default for display)
   const userRole = user?.role || Cookies.get("userRole") || "SUPERADMIN";
@@ -212,6 +216,7 @@ export const Sidebar = () => {
           onLogout={handleLogout}
           userRole={userRole}
           jobBoardEnabled={jobBoardEnabled}
+          logoUrl={logoUrl}
         />
       </aside>
 
@@ -241,6 +246,7 @@ export const Sidebar = () => {
                 onLogout={handleLogout}
                 userRole={userRole}
                 jobBoardEnabled={jobBoardEnabled}
+                logoUrl={logoUrl}
               />
             </motion.aside>
           </>

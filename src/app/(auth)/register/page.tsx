@@ -8,9 +8,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { InputField, PasswordField } from "@/components/auth/FormInputs";
+import { useAppLogo } from "@/hooks/useAppLogo";
 
 export default function Register() {
   const router = useRouter();
+  const logoUrl = useAppLogo();
   const [formData, setFormData] = useState({
     name: "",
     lastname: "",
@@ -144,7 +146,7 @@ export default function Register() {
     >
       <div className="mb-8 flex flex-col items-center text-center">
         <Image
-          src="/logo.webp"
+          src={logoUrl}
           alt="High Ticket English"
           width={100}
           height={100}

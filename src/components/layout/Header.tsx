@@ -7,6 +7,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { useAppLogo } from "@/hooks/useAppLogo";
 import { useAdminDashboardStore, type AdminNotification } from "@/store/adminDashboard";
 import { useAuthStore } from "@/store/auth";
 
@@ -103,6 +104,7 @@ export const Header = () => {
   const router = useRouter();
   const pageTitle = getPageTitle(pathname);
   const user = useAuthStore((state) => state.user);
+  const logoUrl = useAppLogo();
   
   // Notifications state
   const [showNotifications, setShowNotifications] = useState(false);
@@ -308,7 +310,7 @@ export const Header = () => {
             </div>
             <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border-2 border-brand-cyan-dark shadow-sm">
               <Image
-                src="https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png"
+                src={logoUrl}
                 alt="User"
                 fill
                 className="object-cover"

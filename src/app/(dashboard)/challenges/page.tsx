@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Plus, Upload, Mic, HelpCircle, Calendar, Circle, Loader2, AlertCircle, Trash2, Eye, EyeOff } from "lucide-react";
+import { Plus, Upload, Mic, HelpCircle, Calendar, Circle, Loader2, AlertCircle, Trash2, Eye, EyeOff, Pencil } from "lucide-react";
 import { useState, useEffect } from "react";
 
 import { BulkUploadChallengesModal } from "@/components/challenges/BulkUploadChallengesModal";
@@ -23,6 +23,7 @@ export default function ChallengesPage() {
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [editingChallenge, setEditingChallenge] = useState<Challenge | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   
   const isSuperAdmin = user?.role === "SUPERADMIN";
@@ -123,54 +124,54 @@ export default function ChallengesPage() {
         </div>
          
         <div className="overflow-x-auto">
-        <div className="grid grid-cols-7 gap-3 min-w-[480px]">
-          {next7Days.map((day) => {
-            const challenge = getChallengeForDate(day.date);
-            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-            const isToday = day.date === todayStr;
+          <div className="grid grid-cols-7 gap-3 min-w-[480px]">
+            {next7Days.map((day) => {
+              const challenge = getChallengeForDate(day.date);
+              const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+              const isToday = day.date === todayStr;
 
-            return (
-              <div 
-                key={day.date} 
-                className={`relative flex flex-col items-center justify-between rounded-xl border p-4 h-32 transition-all ${
-                  isToday ? "border-brand-primary bg-brand-primary/5" : "border-gray-100 bg-gray-50"
-                }`}
-              >
-                <div className="text-center">
-                  <p className="text-xs font-medium text-gray-500 uppercase">{day.dayName}</p>
-                  <p className={`text-lg font-bold ${isToday ? "text-brand-primary" : "text-gray-900"}`}>{day.dayNumber}</p>
-                </div>
+              return (
+                <div 
+                  key={day.date} 
+                  className={`relative flex flex-col items-center justify-between rounded-xl border p-4 h-32 transition-all ${
+                    isToday ? "border-brand-primary bg-brand-primary/5" : "border-gray-100 bg-gray-50"
+                  }`}
+                >
+                  <div className="text-center">
+                    <p className="text-xs font-medium text-gray-500 uppercase">{day.dayName}</p>
+                    <p className={`text-lg font-bold ${isToday ? "text-brand-primary" : "text-gray-900"}`}>{day.dayNumber}</p>
+                  </div>
                         
-                {challenge ? (
-                  <div className="flex flex-col items-center gap-1">
-                    <div className={`p-1.5 rounded-full ${
-                      challenge.type === "AUDIO" ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"
-                    }`}>
-                      {challenge.type === "AUDIO" ? <Mic className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />}
+                  {challenge ? (
+                    <div className="flex flex-col items-center gap-1">
+                      <div className={`p-1.5 rounded-full ${
+                        challenge.type === "AUDIO" ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"
+                      }`}>
+                        {challenge.type === "AUDIO" ? <Mic className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />}
+                      </div>
+                      <span className="text-[10px] font-medium text-gray-600 truncate w-full text-center px-1">
+                        {challenge.type === "AUDIO" ? "Audio" : "Quiz"}
+                      </span>
+                      {/* SB Live visibility indicators */}
+                      <div className="flex gap-0.5">
+                        {challenge.visibleForSkillBuilder && (
+                          <span className="rounded bg-orange-100 px-1 text-[8px] font-bold text-orange-600">SB</span>
+                        )}
+                        {challenge.visibleForSkillBuilderLive && (
+                          <span className="rounded bg-cyan-100 px-1 text-[8px] font-bold text-cyan-600">Live</span>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-[10px] font-medium text-gray-600 truncate w-full text-center px-1">
-                      {challenge.type === "AUDIO" ? "Audio" : "Quiz"}
-                    </span>
-                    {/* SB Live visibility indicators */}
-                    <div className="flex gap-0.5">
-                      {challenge.visibleForSkillBuilder && (
-                        <span className="rounded bg-orange-100 px-1 text-[8px] font-bold text-orange-600">SB</span>
-                      )}
-                      {challenge.visibleForSkillBuilderLive && (
-                        <span className="rounded bg-cyan-100 px-1 text-[8px] font-bold text-cyan-600">Live</span>
-                      )}
+                  ) : (
+                    <div className="flex flex-col items-center text-gray-400">
+                      <Circle className="h-5 w-5 opacity-20" />
+                      <span className="text-[10px] mt-1">Empty</span>
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center text-gray-400">
-                    <Circle className="h-5 w-5 opacity-20" />
-                    <span className="text-[10px] mt-1">Empty</span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -240,8 +241,15 @@ export default function ChallengesPage() {
                   {challenge.scheduledDate}
                 </div>
                 <div className="flex gap-2">
+                  <button
+                    onClick={() => setEditingChallenge(challenge)}
+                    className="flex items-center gap-1 text-sm font-semibold text-gray-500 hover:text-brand-primary"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit
+                  </button>
                   {isSuperAdmin && (
-                    <button 
+                    <button
                       onClick={() => handleDeleteChallenge(challenge)}
                       disabled={isSaving && deletingId === challenge.id}
                       className="flex items-center gap-1 text-sm font-semibold text-red-400 hover:text-red-600 disabled:opacity-50"
@@ -261,12 +269,18 @@ export default function ChallengesPage() {
         </div>
       </div>
 
-      <CreateChallengeModal 
+      <CreateChallengeModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
       />
 
-      <BulkUploadChallengesModal 
+      <CreateChallengeModal
+        isOpen={editingChallenge !== null}
+        onClose={() => setEditingChallenge(null)}
+        challenge={editingChallenge}
+      />
+
+      <BulkUploadChallengesModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
       />
