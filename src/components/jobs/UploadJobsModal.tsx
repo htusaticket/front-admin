@@ -255,11 +255,23 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
       if (job.managerOte) oteParts.push(`Manager OTE: ${job.managerOte}`);
       if (job.ote && oteParts.length === 0) oteParts.push(`OTE: ${job.ote}`);
 
-      // Parse revenue
+      // Parse revenue — same shape as OTE: accept "$103k-$120k/Mo", "$30k",
+      // "$3,050", ranges, plus 'k' shorthand. Store the max of the range since
+      // the job card title convention uses the upper bound (e.g. "$14k/Mo…").
       let revenue: number | undefined;
       if (job.revenue) {
-        const revenueNum = parseInt(job.revenue.replace(/[^0-9]/g, ""), 10);
-        if (!isNaN(revenueNum)) revenue = revenueNum;
+        const revenueNumbers: number[] = [];
+        const matches = job.revenue.match(/\$?\s*(\d{1,3}(?:,\d{3})*|\d+)(?:\.\d+)?\s*([kK])?/g) ?? [];
+        for (const raw of matches) {
+          const m = raw.match(/(\d{1,3}(?:,\d{3})*|\d+)(?:\.\d+)?\s*([kK])?/);
+          if (!m) continue;
+          let n = parseFloat(m[1].replace(/,/g, ""));
+          if (isNaN(n)) continue;
+          if (m[2]) n *= 1000;
+          if (n < 100) continue;
+          revenueNumbers.push(Math.round(n));
+        }
+        if (revenueNumbers.length > 0) revenue = Math.max(...revenueNumbers);
       }
 
       // Build clean description
