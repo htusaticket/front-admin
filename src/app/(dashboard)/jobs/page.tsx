@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import {
   Briefcase,
   Building,
+  Calendar,
   Search,
   CheckCircle,
   Upload,
@@ -18,7 +19,7 @@ import {
   MapPin,
   DollarSign,
 } from "lucide-react";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 import { CreateJobModal } from "@/components/jobs/CreateJobModal";
 import { EditJobModal } from "@/components/jobs/EditJobModal";
@@ -33,6 +34,27 @@ const STATUS_OPTIONS = [
   { value: "false", label: "Inactive" },
 ];
 
+const formatJobDate = (date: Date | string): string => {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const startOfDay = (x: Date) => {
+    const c = new Date(x);
+    c.setHours(0, 0, 0, 0);
+    return c;
+  };
+  const today = startOfDay(new Date());
+  const target = startOfDay(d);
+  const diffDays = Math.round((today.getTime() - target.getTime()) / 86400000);
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays > 1 && diffDays < 7) return `${diffDays} days ago`;
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  }).format(d);
+};
+
 const formatSalary = (job: JobOffer): string => {
   if (job.oteMin && job.oteMax) {
     return `$${job.oteMin.toLocaleString()} - $${job.oteMax.toLocaleString()}`;
@@ -45,16 +67,19 @@ const formatSalary = (job: JobOffer): string => {
 
 export default function JobsPage() {
   const { user } = useAuthStore();
-  const { 
-    jobs, 
-    isLoading, 
-    isSaving, 
-    error, 
+  const {
+    jobs,
+    isLoading,
+    isSaving,
+    error,
     total,
     page: currentPage,
     totalPages,
-    fetchJobs, 
-    deleteJob, 
+    activeJobs,
+    totalApplicants,
+    newThisWeek,
+    fetchJobs,
+    deleteJob,
   } = useJobsStore();
   
   const [selectedJob, setSelectedJob] = useState<JobOffer | null>(null);
@@ -67,6 +92,7 @@ export default function JobsPage() {
   const [page, setPage] = useState(1);
   const [knownTypes, setKnownTypes] = useState<Set<string>>(new Set());
   const itemsPerPage = 10;
+  const jobListRef = useRef<HTMLDivElement>(null);
   
   const isSuperAdmin = user?.role === "SUPERADMIN";
 
@@ -116,6 +142,10 @@ export default function JobsPage() {
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
     setSelectedJob(null);
+    jobListRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
   
   useEffect(() => {
@@ -208,7 +238,7 @@ export default function JobsPage() {
                 Active Job Posts
               </p>
               <p className="mt-1 font-display text-3xl font-bold text-brand-primary">
-                {total}
+                {activeJobs}
               </p>
             </div>
             <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-brand-cyan-dark/10">
@@ -224,7 +254,7 @@ export default function JobsPage() {
                 Total Applicants
               </p>
               <p className="mt-1 font-display text-3xl font-bold text-brand-primary">
-                {jobs.reduce((acc, job) => acc + (job.applicationsCount || 0), 0)}
+                {totalApplicants}
               </p>
             </div>
             <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-green-100">
@@ -240,11 +270,7 @@ export default function JobsPage() {
                 New this Week
               </p>
               <p className="mt-1 font-display text-3xl font-bold text-brand-primary">
-                {jobs.filter(j => {
-                  const weekAgo = new Date();
-                  weekAgo.setDate(weekAgo.getDate() - 7);
-                  return new Date(j.createdAt) > weekAgo;
-                }).length}
+                {newThisWeek}
               </p>
             </div>
             <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-purple-100">
@@ -298,7 +324,7 @@ export default function JobsPage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
             {/* Job List — paginated (max 10) and scrollable */}
             <div className="lg:col-span-1 flex flex-col gap-3">
-              <div className="space-y-4 overflow-y-auto pr-2 max-h-[calc(100vh-16rem)]">
+              <div ref={jobListRef} className="space-y-4 overflow-y-auto pr-2 max-h-[calc(100vh-16rem)]">
                 {filteredJobs.map((job) => (
                   <motion.div
                     key={job.id}
@@ -371,13 +397,19 @@ export default function JobsPage() {
                         <span className="line-clamp-1">{formatSalary(job)}</span>
                       </div>
                     </div>
-                    <div className="mt-3 flex items-center justify-between">
+                    <div className="mt-3 flex items-center justify-between gap-2">
                       <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
                         {job.type}
                       </span>
-                      <span className={`text-xs font-medium ${job.isActive ? "text-green-600" : "text-gray-400"}`}>
-                        {job.isActive ? "Active" : "Inactive"}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1 text-xs font-medium text-gray-500">
+                          <Calendar className="h-3.5 w-3.5" />
+                          {formatJobDate(job.createdAt)}
+                        </span>
+                        <span className={`text-xs font-medium ${job.isActive ? "text-green-600" : "text-gray-400"}`}>
+                          {job.isActive ? "Active" : "Inactive"}
+                        </span>
+                      </div>
                     </div>
                   </motion.div>
                 ))}

@@ -88,13 +88,13 @@ const SidebarContent = ({
       {/* Logo */}
       <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-black">
+          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg">
             <Image
               src={logoUrl}
               alt="High Ticket USA"
               width={40}
               height={40}
-              className="h-10 w-10 object-cover object-top"
+              className="h-full w-full object-contain"
             />
           </div>
           <div className="flex flex-col">

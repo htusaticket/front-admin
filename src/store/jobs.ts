@@ -45,6 +45,9 @@ export interface JobsListResponse {
   page: number;
   limit: number;
   totalPages: number;
+  activeJobs: number;
+  totalApplicants: number;
+  newThisWeek: number;
 }
 
 export interface CreateJobData {
@@ -80,6 +83,9 @@ interface JobsState {
   total: number;
   page: number;
   totalPages: number;
+  activeJobs: number;
+  totalApplicants: number;
+  newThisWeek: number;
 }
 
 interface JobsActions {
@@ -110,6 +116,9 @@ const initialState: JobsState = {
   total: 0,
   page: 1,
   totalPages: 1,
+  activeJobs: 0,
+  totalApplicants: 0,
+  newThisWeek: 0,
 };
 
 export const useJobsStore = create<JobsStore>((set, get) => ({
@@ -137,6 +146,9 @@ export const useJobsStore = create<JobsStore>((set, get) => ({
         total: data.total,
         page: data.page,
         totalPages: data.totalPages,
+        activeJobs: data.activeJobs ?? 0,
+        totalApplicants: data.totalApplicants ?? 0,
+        newThisWeek: data.newThisWeek ?? 0,
         isLoading: false,
       });
     } catch (error) {
