@@ -357,7 +357,7 @@ export default function JobsPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="flex items-center gap-2 text-brand-primary hover:underline"
+                          className="flex w-fit items-center gap-2 text-brand-primary hover:underline"
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
                         Social
@@ -369,7 +369,7 @@ export default function JobsPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="flex items-center gap-2 text-purple-600 hover:underline"
+                          className="flex w-fit items-center gap-2 text-purple-600 hover:underline"
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
                         Recruiter
@@ -381,7 +381,7 @@ export default function JobsPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="flex items-center gap-2 text-brand-primary hover:underline"
+                          className="flex w-fit items-center gap-2 text-brand-primary hover:underline"
                         >
                           <Globe className="h-3.5 w-3.5" />
                         Website
