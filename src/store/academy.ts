@@ -22,8 +22,23 @@ export interface Lesson {
   order: number;
   status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   moduleId: number;
+  sectionId?: number | null;
   resources: LessonResource[];
   createdAt?: string;
+}
+
+export interface Section {
+  id: number;
+  moduleId: number;
+  title: string;
+  order: number;
+  lessonsCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SectionWithLessons extends Section {
+  lessons: Lesson[];
 }
 
 export interface Module {
@@ -39,6 +54,8 @@ export interface Module {
   createdAt: string;
   updatedAt: string;
   lessons?: Lesson[];
+  sections?: SectionWithLessons[];
+  unsectionedLessons?: Lesson[];
 }
 
 export interface ModulesListResponse {
@@ -65,7 +82,13 @@ export interface CreateLessonData {
   duration: string;
   contentUrl?: string;
   order?: number;
+  sectionId?: number | null;
   status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+}
+
+export interface CreateSectionData {
+  title: string;
+  order?: number;
 }
 
 export interface CreateResourceData {
@@ -100,6 +123,13 @@ interface AcademyActions {
   deleteResource: (resourceId: number) => Promise<{ success: boolean; message: string }>;
   reorderModules: (orderedIds: number[]) => Promise<{ success: boolean; message: string }>;
   reorderLessons: (moduleId: number, orderedIds: number[]) => Promise<{ success: boolean; message: string }>;
+  createSection: (moduleId: number, data: CreateSectionData) => Promise<{ success: boolean; message: string }>;
+  updateSection: (
+    sectionId: number,
+    data: Partial<CreateSectionData>,
+  ) => Promise<{ success: boolean; message: string }>;
+  deleteSection: (sectionId: number) => Promise<{ success: boolean; message: string }>;
+  reorderSections: (moduleId: number, orderedIds: number[]) => Promise<{ success: boolean; message: string }>;
   clearError: () => void;
   clearSelectedModule: () => void;
 }
@@ -266,29 +296,22 @@ export const useAcademyStore = create<AcademyStore>((set, get) => ({
 
   updateLesson: async (lessonId, data) => {
     set({ isSaving: true, error: null });
-    
+
     try {
-      const response = await api.put<ApiResponse<Lesson>>(
+      await api.put<ApiResponse<Lesson>>(
         `/api/admin/academy/lessons/${lessonId}`,
         data,
       );
-      
-      // Update in selected module if exists
+
+      // Refetch to keep `lessons` flat list, `sections[].lessons` and
+      // `unsectionedLessons` in sync — partial updates leave the grouped
+      // arrays stale (e.g. after assigning the lesson to a section).
       const { selectedModule } = get();
-      if (selectedModule?.lessons) {
-        set({
-          selectedModule: {
-            ...selectedModule,
-            lessons: selectedModule.lessons.map((l) =>
-              l.id === lessonId ? { ...l, ...response.data.data } : l,
-            ),
-          },
-          isSaving: false,
-        });
-      } else {
-        set({ isSaving: false });
+      if (selectedModule) {
+        await get().fetchModuleById(selectedModule.id);
       }
-      
+
+      set({ isSaving: false });
       toast.success("Lección actualizada correctamente");
       return { success: true, message: "Lección actualizada" };
     } catch (error) {
@@ -301,25 +324,16 @@ export const useAcademyStore = create<AcademyStore>((set, get) => ({
 
   deleteLesson: async (lessonId) => {
     set({ isSaving: true, error: null });
-    
+
     try {
       await api.delete(`/api/admin/academy/lessons/${lessonId}`);
-      
-      // Remove from selected module if exists
+
       const { selectedModule } = get();
-      if (selectedModule?.lessons) {
-        set({
-          selectedModule: {
-            ...selectedModule,
-            lessons: selectedModule.lessons.filter((l) => l.id !== lessonId),
-            lessonsCount: selectedModule.lessonsCount - 1,
-          },
-          isSaving: false,
-        });
-      } else {
-        set({ isSaving: false });
+      if (selectedModule) {
+        await get().fetchModuleById(selectedModule.id);
       }
-      
+
+      set({ isSaving: false });
       toast.success("Lección eliminada correctamente");
       return { success: true, message: "Lección eliminada" };
     } catch (error) {
@@ -432,14 +446,102 @@ export const useAcademyStore = create<AcademyStore>((set, get) => ({
 
   reorderLessons: async (moduleId, orderedIds) => {
     set({ isSaving: true, error: null });
-    
+
     try {
       await api.put(`/api/admin/academy/modules/${moduleId}/lessons/reorder`, { orderedIds });
-      
+
       await get().fetchModuleById(moduleId);
-      
+
       set({ isSaving: false });
       toast.success("Orden de lecciones actualizado");
+      return { success: true, message: "Orden actualizado" };
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      set({ error: errorMessage, isSaving: false });
+      toast.error(errorMessage);
+      return { success: false, message: errorMessage };
+    }
+  },
+
+  createSection: async (moduleId, data) => {
+    set({ isSaving: true, error: null });
+
+    try {
+      await api.post<ApiResponse<Section>>(
+        `/api/admin/academy/modules/${moduleId}/sections`,
+        data,
+      );
+
+      await get().fetchModuleById(moduleId);
+
+      set({ isSaving: false });
+      toast.success("Sección creada correctamente");
+      return { success: true, message: "Sección creada" };
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      set({ error: errorMessage, isSaving: false });
+      toast.error(errorMessage);
+      return { success: false, message: errorMessage };
+    }
+  },
+
+  updateSection: async (sectionId, data) => {
+    set({ isSaving: true, error: null });
+
+    try {
+      await api.put<ApiResponse<Section>>(
+        `/api/admin/academy/sections/${sectionId}`,
+        data,
+      );
+
+      const { selectedModule } = get();
+      if (selectedModule) {
+        await get().fetchModuleById(selectedModule.id);
+      }
+
+      set({ isSaving: false });
+      toast.success("Sección actualizada correctamente");
+      return { success: true, message: "Sección actualizada" };
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      set({ error: errorMessage, isSaving: false });
+      toast.error(errorMessage);
+      return { success: false, message: errorMessage };
+    }
+  },
+
+  deleteSection: async (sectionId) => {
+    set({ isSaving: true, error: null });
+
+    try {
+      await api.delete(`/api/admin/academy/sections/${sectionId}`);
+
+      const { selectedModule } = get();
+      if (selectedModule) {
+        await get().fetchModuleById(selectedModule.id);
+      }
+
+      set({ isSaving: false });
+      toast.success("Sección eliminada correctamente");
+      return { success: true, message: "Sección eliminada" };
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      set({ error: errorMessage, isSaving: false });
+      toast.error(errorMessage);
+      return { success: false, message: errorMessage };
+    }
+  },
+
+  reorderSections: async (moduleId, orderedIds) => {
+    set({ isSaving: true, error: null });
+
+    try {
+      await api.put(`/api/admin/academy/modules/${moduleId}/sections/reorder`, { orderedIds });
+
+      await get().fetchModuleById(moduleId);
+
+      set({ isSaving: false });
+      toast.success("Orden de secciones actualizado");
       return { success: true, message: "Orden actualizado" };
     } catch (error) {
       const errorMessage = getErrorMessage(error);

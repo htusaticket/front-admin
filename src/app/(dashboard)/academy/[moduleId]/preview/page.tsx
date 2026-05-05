@@ -14,9 +14,16 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 import { useAcademyStore, type Lesson } from "@/store/academy";
+
+interface PreviewSection {
+  id: number | null; // null = virtual "No section" bucket
+  title: string | null;
+  order: number;
+  lessons: Lesson[];
+}
 
 /**
  * Converts a regular YouTube/Vimeo URL to an embeddable URL for iframes.
@@ -65,14 +72,41 @@ export default function ModulePreviewPage() {
     return () => clearSelectedModule();
   }, [moduleId, fetchModuleById, clearSelectedModule]);
 
-  // Auto-select first lesson
-  useEffect(() => {
-    if (selectedModule?.lessons?.length && !selectedLesson) {
-      const sorted = [...selectedModule.lessons].sort((a, b) => a.order - b.order);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedLesson(sorted[0]);
+  // Build the same section grouping the student sees: real sections first
+  // (in order), then any unsectioned lessons in a virtual bucket at the end.
+  const previewSections = useMemo<PreviewSection[]>(() => {
+    if (!selectedModule) return [];
+    const real: PreviewSection[] = (selectedModule.sections || []).map(s => ({
+      id: s.id,
+      title: s.title,
+      order: s.order,
+      lessons: [...(s.lessons || [])].sort((a, b) => a.order - b.order),
+    }));
+    const sorted = real.sort((a, b) => a.order - b.order);
+    const orphans = (selectedModule.unsectionedLessons || [])
+      .slice()
+      .sort((a, b) => a.order - b.order);
+    if (orphans.length > 0) {
+      const maxOrder = sorted.reduce((max, s) => Math.max(max, s.order), 0);
+      sorted.push({ id: null, title: null, order: maxOrder + 1, lessons: orphans });
     }
-  }, [selectedModule, selectedLesson]);
+    return sorted;
+  }, [selectedModule]);
+
+  // Flat list in the same visual order, used for auto-select and counts.
+  const orderedLessons = useMemo(() => previewSections.flatMap(s => s.lessons), [previewSections]);
+  const hasRealSections = useMemo(
+    () => previewSections.some(s => s.id !== null && s.title !== null),
+    [previewSections],
+  );
+
+  // Auto-select first lesson on first load.
+  useEffect(() => {
+    if (orderedLessons.length > 0 && !selectedLesson) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedLesson(orderedLessons[0] ?? null);
+    }
+  }, [orderedLessons, selectedLesson]);
 
   if (isLoading && !selectedModule) {
     return (
@@ -101,7 +135,12 @@ export default function ModulePreviewPage() {
     );
   }
 
-  const lessons = [...(selectedModule.lessons || [])].sort((a, b) => a.order - b.order);
+  const totalLessons = orderedLessons.length;
+
+  // Build a map of lesson.id → 1-based running index across sections so the
+  // numbering matches what the student sees in the sidebar.
+  const lessonIndex = new Map<number, number>();
+  orderedLessons.forEach((l, i) => lessonIndex.set(l.id, i + 1));
 
   return (
     <div className="space-y-6">
@@ -155,36 +194,49 @@ export default function ModulePreviewPage() {
                   {selectedModule.title}
                 </h3>
                 <p className="text-xs text-gray-500">
-                  {lessons.length} {lessons.length === 1 ? "lección" : "lecciones"}
+                  {totalLessons} {totalLessons === 1 ? "lesson" : "lessons"}
                 </p>
               </div>
             </div>
 
-            <div className="space-y-1">
-              {lessons.map((lesson, index) => (
-                <button
-                  key={lesson.id}
-                  onClick={() => setSelectedLesson(lesson)}
-                  className={`w-full text-left flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all ${
-                    selectedLesson?.id === lesson.id
-                      ? "bg-brand-cyan-dark/10 text-brand-cyan-dark"
-                      : "text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold shrink-0 ${
-                    selectedLesson?.id === lesson.id
-                      ? "bg-brand-cyan-dark text-white"
-                      : "bg-gray-100 text-gray-500"
-                  }`}>
-                    {lesson.order || index + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold truncate">{lesson.title}</p>
-                    <p className="text-xs text-gray-400">{lesson.duration}{!lesson.duration?.toString().includes("min") && " min"}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
+            {hasRealSections ? (
+              <div className="space-y-4">
+                {previewSections.map(section => {
+                  if (section.lessons.length === 0) return null;
+                  const isVirtual = section.id === null || section.title === null;
+                  return (
+                    <div key={section.id ?? "virtual"}>
+                      <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                        {isVirtual ? "Other Lessons" : section.title}
+                      </p>
+                      <div className="space-y-1">
+                        {section.lessons.map(lesson => (
+                          <PreviewLessonItem
+                            key={lesson.id}
+                            lesson={lesson}
+                            index={lessonIndex.get(lesson.id) ?? 0}
+                            isActive={selectedLesson?.id === lesson.id}
+                            onSelect={() => setSelectedLesson(lesson)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {orderedLessons.map(lesson => (
+                  <PreviewLessonItem
+                    key={lesson.id}
+                    lesson={lesson}
+                    index={lessonIndex.get(lesson.id) ?? 0}
+                    isActive={selectedLesson?.id === lesson.id}
+                    onSelect={() => setSelectedLesson(lesson)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -330,30 +382,48 @@ export default function ModulePreviewPage() {
               {/* Mobile Lesson Selector */}
               <div className="lg:hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
                 <h3 className="font-display font-bold text-brand-primary mb-3">
-                  Lecciones del Módulo
+                  Module Lessons
                 </h3>
-                <div className="space-y-1">
-                  {lessons.map((lesson, index) => (
-                    <button
-                      key={lesson.id}
-                      onClick={() => setSelectedLesson(lesson)}
-                      className={`w-full text-left flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all ${
-                        selectedLesson?.id === lesson.id
-                          ? "bg-brand-cyan-dark/10 text-brand-cyan-dark"
-                          : "text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold shrink-0 ${
-                        selectedLesson?.id === lesson.id
-                          ? "bg-brand-cyan-dark text-white"
-                          : "bg-gray-100 text-gray-500"
-                      }`}>
-                        {lesson.order || index + 1}
-                      </span>
-                      <span className="text-sm font-semibold truncate">{lesson.title}</span>
-                    </button>
-                  ))}
-                </div>
+                {hasRealSections ? (
+                  <div className="space-y-4">
+                    {previewSections.map(section => {
+                      if (section.lessons.length === 0) return null;
+                      const isVirtual = section.id === null || section.title === null;
+                      return (
+                        <div key={section.id ?? "virtual"}>
+                          <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                            {isVirtual ? "Other Lessons" : section.title}
+                          </p>
+                          <div className="space-y-1">
+                            {section.lessons.map(lesson => (
+                              <PreviewLessonItem
+                                key={lesson.id}
+                                lesson={lesson}
+                                index={lessonIndex.get(lesson.id) ?? 0}
+                                isActive={selectedLesson?.id === lesson.id}
+                                onSelect={() => setSelectedLesson(lesson)}
+                                compact
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {orderedLessons.map(lesson => (
+                      <PreviewLessonItem
+                        key={lesson.id}
+                        lesson={lesson}
+                        index={lessonIndex.get(lesson.id) ?? 0}
+                        isActive={selectedLesson?.id === lesson.id}
+                        onSelect={() => setSelectedLesson(lesson)}
+                        compact
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             </>
           ) : (
@@ -368,5 +438,45 @@ export default function ModulePreviewPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+interface PreviewLessonItemProps {
+  lesson: Lesson;
+  index: number;
+  isActive: boolean;
+  onSelect: () => void;
+  compact?: boolean;
+}
+
+function PreviewLessonItem({ lesson, index, isActive, onSelect, compact }: PreviewLessonItemProps) {
+  return (
+    <button
+      onClick={onSelect}
+      className={`w-full text-left flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all ${
+        isActive
+          ? "bg-brand-cyan-dark/10 text-brand-cyan-dark"
+          : "text-gray-600 hover:bg-gray-50"
+      }`}
+    >
+      <span
+        className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold shrink-0 ${
+          isActive ? "bg-brand-cyan-dark text-white" : "bg-gray-100 text-gray-500"
+        }`}
+      >
+        {index}
+      </span>
+      {compact ? (
+        <span className="text-sm font-semibold truncate">{lesson.title}</span>
+      ) : (
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold truncate">{lesson.title}</p>
+          <p className="text-xs text-gray-400">
+            {lesson.duration}
+            {!lesson.duration?.toString().includes("min") && " min"}
+          </p>
+        </div>
+      )}
+    </button>
   );
 }

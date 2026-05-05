@@ -1,15 +1,14 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  X, 
-  Check, 
-  Video, 
-  FileText, 
-  Trash2, 
+import {
+  X,
+  Check,
+  Video,
+  FileText,
+  Trash2,
   Loader2,
   Clock,
-  GripVertical,
   Upload,
   AlertTriangle,
 } from "lucide-react";
@@ -75,18 +74,19 @@ interface AddLessonModalProps {
   onClose: () => void;
   moduleId: number;
   initialData?: Lesson | null;
+  defaultSectionId?: number | null;
 }
 
-export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLessonModalProps) {
+export function AddLessonModal({ isOpen, onClose, moduleId, initialData, defaultSectionId }: AddLessonModalProps) {
   useModalLock(isOpen, onClose);
   const { createLesson, updateLesson, uploadResource, deleteResource, isSaving, selectedModule } = useAcademyStore();
-  
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     duration: "",
     contentUrl: "",
-    order: 0,
+    sectionId: null as number | null,
     status: "PUBLISHED" as "DRAFT" | "PUBLISHED" | "ARCHIVED",
   });
 
@@ -97,23 +97,16 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Calculate next available order
-  const getNextOrder = () => {
-    const lessons = selectedModule?.lessons || [];
-    if (lessons.length === 0) return 1;
-    const maxOrder = Math.max(...lessons.map(l => l.order || 0));
-    return maxOrder + 1;
-  };
-
   // Sync form data with initialData prop
   useEffect(() => {
     if (isOpen && initialData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         title: initialData.title || "",
         description: initialData.description || "",
         duration: initialData.duration || "",
         contentUrl: initialData.contentUrl || "",
-        order: initialData.order || 1,
+        sectionId: initialData.sectionId ?? null,
         status: initialData.status || "PUBLISHED",
       });
       setExistingResources(initialData.resources || []);
@@ -123,34 +116,26 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
         description: "",
         duration: "",
         contentUrl: "",
-        order: getNextOrder(),
+        sectionId: defaultSectionId ?? null,
         status: "PUBLISHED",
       });
       setExistingResources([]);
     }
     setPendingFiles([]);
     setFileSizeError(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, initialData]);
+  }, [isOpen, initialData, defaultSectionId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Auto-fix order conflict: if order already taken, use next available
-    let finalOrder = formData.order;
-    if (!initialData) {
-      const existingOrders = (selectedModule?.lessons || []).map(l => l.order);
-      while (existingOrders.includes(finalOrder)) {
-        finalOrder++;
-      }
-    }
 
+    // Order is implicit: backend auto-appends at the end of the (module, section) bucket
+    // when omitted. Reordering is done by drag-and-drop on the module page.
     const lessonData = {
       title: formData.title,
       description: formData.description || undefined,
       duration: formData.duration,
       contentUrl: formData.contentUrl || undefined,
-      order: initialData ? formData.order : finalOrder,
+      sectionId: formData.sectionId,
       status: formData.status,
     };
     
@@ -375,34 +360,27 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData }: AddLe
                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-400">min</span>
                       </div>
                     </div>
-                      
+
                     <div>
                       <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                        <div className="flex items-center gap-1.5">
-                          <GripVertical className="h-4 w-4 text-brand-primary" />
-                            Orden
-                        </div>
+                        Section
                       </label>
-                      <input
-                        type="number"
-                        min="1"
-                        placeholder="1"
-                        value={formData.order}
+                      <select
+                        value={formData.sectionId === null ? "" : String(formData.sectionId)}
                         onChange={(e) => {
-                          const val = parseInt(e.target.value) || 1;
-                          setFormData({ ...formData, order: Math.max(1, val) });
+                          const value = e.target.value;
+                          setFormData({
+                            ...formData,
+                            sectionId: value === "" ? null : Number(value),
+                          });
                         }}
-                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
-                      />
-                      {/* Order conflict warning */}
-                      {selectedModule?.lessons?.some(
-                        l => l.order === formData.order && l.id !== initialData?.id,
-                      ) && (
-                        <p className="mt-1 flex items-center gap-1 text-xs text-amber-600">
-                          <AlertTriangle className="h-3 w-3" />
-                            Ya existe una lección con este orden. Se asignará el siguiente disponible.
-                        </p>
-                      )}
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20 bg-white"
+                      >
+                        <option value="">No section</option>
+                        {(selectedModule?.sections || []).map((s) => (
+                          <option key={s.id} value={s.id}>{s.title}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 

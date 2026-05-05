@@ -17,7 +17,7 @@ import {
   ExternalLink,
   Mail,
   MapPin,
-  DollarSign,
+  Wallet,
 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
@@ -465,7 +465,7 @@ export default function JobsPage() {
                       </div>
                       {selectedJob.revenue ? (
                         <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-gray-400" />
+                          <Wallet className="h-4 w-4 text-gray-400" />
                           <span>${selectedJob.revenue.toLocaleString()}/Mo revenue</span>
                         </div>
                       ) : null}
