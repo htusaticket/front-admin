@@ -124,12 +124,12 @@ export default function ModulePreviewPage() {
           className="flex items-center gap-2 text-sm text-gray-600 hover:text-brand-primary transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Volver al módulo
+          Back to module
         </Link>
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-red-200">
           <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900">Error al cargar la vista previa</h3>
-          <p className="text-sm text-gray-500 mt-1">{error || "Módulo no encontrado"}</p>
+          <h3 className="text-lg font-semibold text-gray-900">Failed to load preview</h3>
+          <p className="text-sm text-gray-500 mt-1">{error || "Module not found"}</p>
         </div>
       </div>
     );
@@ -149,7 +149,7 @@ export default function ModulePreviewPage() {
         <div className="flex items-center gap-2 text-amber-800">
           <Eye className="h-5 w-5" />
           <span className="text-sm font-semibold">
-            Modo Vista Previa — Así verá el estudiante este módulo
+            Preview Mode — This is how students will see this module
           </span>
         </div>
         <button
@@ -157,7 +157,7 @@ export default function ModulePreviewPage() {
           className="flex items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-sm font-semibold text-amber-800 hover:bg-amber-100 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Salir de vista previa
+          Exit preview
         </button>
       </div>
 
@@ -256,7 +256,7 @@ export default function ModulePreviewPage() {
                       className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center"
                     >
                       <p className="text-sm text-red-600 font-medium">
-                        ⚠️ La URL del video no es válida.
+                        ⚠️ The video URL is not valid.
                       </p>
                     </motion.div>
                   );
@@ -286,7 +286,7 @@ export default function ModulePreviewPage() {
                       {selectedLesson.description && (
                         <div className="mt-4">
                           <h2 className="font-display text-lg font-bold text-brand-primary">
-                            Descripción
+                            Description
                           </h2>
                           <p className="mt-2 text-gray-700 leading-relaxed">
                             {selectedLesson.description}
@@ -327,7 +327,7 @@ export default function ModulePreviewPage() {
                   )}
                   <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-200 text-center">
                     <p className="text-sm text-gray-500">
-                      No hay video configurado para esta lección
+                      No video set for this lesson
                     </p>
                   </div>
                 </motion.div>
@@ -344,7 +344,7 @@ export default function ModulePreviewPage() {
                   <div className="mb-4 flex items-center gap-2">
                     <FileText className="h-5 w-5 text-brand-cyan-dark" />
                     <h2 className="font-display text-lg font-bold text-brand-primary">
-                      Recursos Descargables
+                      Downloadable Resources
                     </h2>
                   </div>
                   <div className="space-y-3">
@@ -371,7 +371,7 @@ export default function ModulePreviewPage() {
                           className="flex items-center gap-2 rounded-lg bg-brand-cyan-dark px-4 py-2 text-sm font-bold text-white transition-all hover:bg-brand-cyan"
                         >
                           <Download className="h-4 w-4" />
-                          Descargar
+                          Download
                         </a>
                       </div>
                     ))}
@@ -429,9 +429,9 @@ export default function ModulePreviewPage() {
           ) : (
             <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-gray-200">
               <Video className="h-12 w-12 text-gray-300 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900">No hay lecciones</h3>
+              <h3 className="text-lg font-semibold text-gray-900">No lessons</h3>
               <p className="text-sm text-gray-500 mt-1">
-                Este módulo aún no tiene lecciones
+                This module has no lessons yet
               </p>
             </div>
           )}

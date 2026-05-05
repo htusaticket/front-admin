@@ -435,18 +435,18 @@ export default function ModuleDetailPage() {
           className="flex items-center gap-2 text-sm text-gray-600 hover:text-brand-primary transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Volver a Academy
+          Back to Academy
         </Link>
 
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-red-200">
           <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900">Error al cargar el módulo</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Failed to load module</h3>
           <p className="text-sm text-gray-500 mt-1">{error}</p>
           <button
             onClick={() => fetchModuleById(moduleId)}
             className="mt-4 px-4 py-2 text-sm font-semibold text-white bg-brand-primary rounded-lg hover:bg-brand-primary/90"
           >
-            Reintentar
+            Retry
           </button>
         </div>
       </div>
@@ -461,13 +461,13 @@ export default function ModuleDetailPage() {
           className="flex items-center gap-2 text-sm text-gray-600 hover:text-brand-primary transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Volver a Academy
+          Back to Academy
         </Link>
 
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-gray-200">
           <AlertCircle className="h-12 w-12 text-gray-400 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900">Módulo no encontrado</h3>
-          <p className="text-sm text-gray-500 mt-1">El módulo que buscas no existe</p>
+          <h3 className="text-lg font-semibold text-gray-900">Module not found</h3>
+          <p className="text-sm text-gray-500 mt-1">The module you&apos;re looking for doesn&apos;t exist</p>
         </div>
       </div>
     );
@@ -507,7 +507,7 @@ export default function ModuleDetailPage() {
             <p className="mt-1 text-sm text-gray-500 line-clamp-2">{selectedModule.description}</p>
             <div className="mt-2 flex items-center gap-3">
               <span className="text-xs font-semibold text-gray-500">
-                {totalLessons} {totalLessons === 1 ? "lección" : "lecciones"}
+                {totalLessons} {totalLessons === 1 ? "lesson" : "lessons"}
               </span>
               {selectedModule.visibleForSkillBuilder && (
                 <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
@@ -529,7 +529,7 @@ export default function ModuleDetailPage() {
             className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors"
           >
             <Eye className="h-5 w-5" />
-            Vista Previa
+            Preview
           </Link>
           <button
             onClick={() => {
@@ -546,7 +546,7 @@ export default function ModuleDetailPage() {
             className="flex items-center gap-2 rounded-xl bg-brand-cyan-dark px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-cyan-dark/20 transition-all hover:bg-brand-cyan active:scale-95 shrink-0"
           >
             <Plus className="h-5 w-5" />
-            Nueva Lección
+            New Lesson
           </button>
         </div>
       </div>
@@ -933,7 +933,7 @@ function SortableLessonRow({
               <span className="flex items-center gap-1 text-xs text-gray-500">
                 <FileText className="h-3 w-3" />
                 {lesson.resources.length}{" "}
-                {lesson.resources.length === 1 ? "recurso" : "recursos"}
+                {lesson.resources.length === 1 ? "resource" : "resources"}
               </span>
             )}
 
@@ -945,7 +945,7 @@ function SortableLessonRow({
                 className="flex items-center gap-1 text-xs text-brand-cyan-dark hover:underline"
               >
                 <ExternalLink className="h-3 w-3" />
-                Ver video
+                Watch video
               </a>
             )}
           </div>
@@ -958,7 +958,7 @@ function SortableLessonRow({
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-gray-700 border border-gray-200 rounded-lg hover:border-brand-primary hover:text-brand-primary transition-colors"
         >
           <Edit2 className="h-4 w-4" />
-          Editar
+          Edit
         </button>
         {isSuperAdmin && (
           <button
@@ -971,7 +971,7 @@ function SortableLessonRow({
             ) : (
               <Trash2 className="h-4 w-4" />
             )}
-            Eliminar
+            Delete
           </button>
         )}
       </div>

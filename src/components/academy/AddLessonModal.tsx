@@ -183,7 +183,7 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData, default
       
       if (oversizedFiles.length > 0) {
         setFileSizeError(
-          `Los siguientes archivos exceden el límite de ${MAX_FILE_SIZE_MB}MB: ${oversizedFiles.map(f => f.name).join(", ")}`,
+          `The following files exceed the ${MAX_FILE_SIZE_MB}MB limit: ${oversizedFiles.map(f => f.name).join(", ")}`,
         );
         // Only add valid files
         const validFiles = newFiles.filter(f => f.size <= MAX_FILE_SIZE_BYTES);
@@ -220,7 +220,7 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData, default
       
       if (oversizedFiles.length > 0) {
         setFileSizeError(
-          `Los siguientes archivos exceden el límite de ${MAX_FILE_SIZE_MB}MB: ${oversizedFiles.map(f => f.name).join(", ")}`,
+          `The following files exceed the ${MAX_FILE_SIZE_MB}MB limit: ${oversizedFiles.map(f => f.name).join(", ")}`,
         );
         const validFiles = newFiles.filter(f => f.size <= MAX_FILE_SIZE_BYTES);
         if (validFiles.length > 0) {
@@ -284,7 +284,7 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData, default
                   <Video className="h-5 w-5 text-brand-cyan-dark" />
                 </div>
                 <h2 className="font-display text-lg font-bold text-brand-primary">
-                  {initialData ? "Editar Lección" : "Nueva Lección"}
+                  {initialData ? "Edit Lesson" : "New Lesson"}
                 </h2>
               </div>
               <button
@@ -301,17 +301,17 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData, default
                 {/* Basic Info */}
                 <div className="space-y-4">
                   <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
-                      Información Básica
+                      Basic Information
                   </h3>
                     
                   <div>
                     <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                        Título de la Lección *
+                        Lesson Title *
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="Ej: Introducción a la gramática"
+                      placeholder="e.g. Introduction to grammar"
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
@@ -320,11 +320,11 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData, default
 
                   <div>
                     <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                        Descripción
+                        Description
                     </label>
                     <textarea
                       rows={3}
-                      placeholder="Descripción detallada del contenido de la lección..."
+                      placeholder="Detailed description of the lesson content..."
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20 resize-none"
@@ -336,7 +336,7 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData, default
                       <label className="mb-1.5 block text-sm font-semibold text-gray-700">
                         <div className="flex items-center gap-1.5">
                           <Clock className="h-4 w-4 text-brand-primary" />
-                            Duración *
+                            Duration *
                         </div>
                       </label>
                       <div className="relative">
@@ -344,7 +344,7 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData, default
                           type="number"
                           required
                           min="1"
-                          placeholder="Ej: 15"
+                          placeholder="e.g. 15"
                           value={formData.duration}
                           onChange={(e) => {
                             const val = e.target.value.replace(/[^0-9]/g, "");
@@ -407,22 +407,22 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData, default
                 <div className="space-y-4 pt-4 border-t border-gray-100">
                   <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
                     <Video className="h-4 w-4 text-brand-cyan-dark" />
-                      Video de la Lección
+                      Lesson Video
                   </h3>
-                    
+
                   <div>
                     <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                        URL del Video (YouTube, Vimeo, etc.)
+                        Video URL (YouTube, Vimeo, etc.)
                     </label>
                     <input
                       type="url"
-                      placeholder="https://www.youtube.com/embed/... o https://vimeo.com/..."
+                      placeholder="https://www.youtube.com/embed/... or https://vimeo.com/..."
                       value={formData.contentUrl}
                       onChange={(e) => setFormData({ ...formData, contentUrl: e.target.value })}
                       className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
                     />
                     <p className="mt-1 text-xs text-gray-500">
-                        Usa la URL de embed para YouTube o el link directo para otros servicios
+                        Use the embed URL for YouTube or the direct link for other services
                     </p>
                   </div>
 
@@ -433,8 +433,8 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData, default
                       return (
                         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-center">
                           <p className="text-sm text-red-600 font-medium">
-                              ⚠️ La URL ingresada no es válida.
-                              Ingresa una URL de YouTube, Vimeo u otro servicio de video.
+                              ⚠️ The URL entered is not valid.
+                              Enter a YouTube, Vimeo or other video service URL.
                           </p>
                         </div>
                       );
@@ -456,7 +456,7 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData, default
                 <div className="space-y-4 pt-4 border-t border-gray-100">
                   <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
                     <FileText className="h-4 w-4 text-red-500" />
-                      Recursos Adicionales
+                      Additional Resources
                   </h3>
 
                   {/* Upload Area */}
@@ -484,11 +484,11 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData, default
                         <Upload className="h-5 w-5 text-gray-400" />
                       </div>
                       <p className="text-sm font-medium text-gray-600">
-                        <span className="text-brand-primary">Click para subir archivos</span>{" "}
-                          o arrastra y suelta
+                        <span className="text-brand-primary">Click to upload files</span>{" "}
+                          or drag and drop
                       </p>
                       <p className="mt-1 text-xs text-gray-400">
-                          PDF, DOC, documentos, imágenes, videos (máx. {MAX_FILE_SIZE_MB}MB)
+                          PDF, DOC, documents, images, videos (max. {MAX_FILE_SIZE_MB}MB)
                       </p>
                     </div>
                   </div>
@@ -504,7 +504,7 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData, default
                   {/* Existing Resources (edit mode) */}
                   {existingResources.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-xs font-semibold text-gray-500 uppercase">Recursos existentes</p>
+                      <p className="text-xs font-semibold text-gray-500 uppercase">Existing resources</p>
                       {existingResources.map((resource) => (
                         <div
                           key={resource.id}
@@ -539,13 +539,13 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData, default
                   {pendingFiles.length > 0 && (
                     <div className="space-y-2">
                       <p className="text-xs font-semibold text-gray-500 uppercase">
-                          Archivos pendientes de subir
+                          Pending files to upload
                       </p>
                       {isUploading && (
                         <div className="flex items-center gap-3 rounded-lg border border-brand-primary/30 bg-brand-primary/5 p-3">
                           <Loader2 className="h-5 w-5 animate-spin text-brand-primary" />
                           <p className="text-sm font-medium text-brand-primary">
-                              Subiendo archivos... no cierres esta ventana
+                              Uploading files... please don&apos;t close this window
                           </p>
                         </div>
                       )}
@@ -588,7 +588,7 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData, default
                     disabled={isUploading}
                     className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                   >
-                      Cancelar
+                      Cancel
                   </button>
                   <button
                     type="submit"
@@ -598,17 +598,17 @@ export function AddLessonModal({ isOpen, onClose, moduleId, initialData, default
                     {isUploading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                          Subiendo archivos...
+                          Uploading files...
                       </>
                     ) : isSaving ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                          Guardando...
+                          Saving...
                       </>
                     ) : (
                       <>
                         <Check className="h-4 w-4" />
-                        {initialData ? "Guardar Cambios" : "Crear Lección"}
+                        {initialData ? "Save Changes" : "Create Lesson"}
                       </>
                     )}
                   </button>
