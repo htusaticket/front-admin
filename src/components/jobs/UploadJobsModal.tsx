@@ -303,7 +303,7 @@ export function UploadJobsModal({ isOpen, onClose }: UploadJobsModalProps) {
 
       return {
         title: job.title,
-        company: job.name || "Unknown",
+        company: job.name || "",
         description,
         type: job.hiring || "Setter",
         salaryRange,

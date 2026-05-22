@@ -286,7 +286,7 @@ export default function JobsPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by title, company, code..."
+            placeholder="Search by title, company, code, description..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="h-12 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-4 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-brand-cyan-dark focus:ring-2 focus:ring-brand-cyan-dark/20"
@@ -347,9 +347,11 @@ export default function JobsPage() {
                         </span>
                       )}
                     </div>
-                    <p className="mb-2 text-sm font-semibold text-gray-700">
-                      {job.company}
-                    </p>
+                    {job.company && job.company.trim().toLowerCase() !== "unknown" && (
+                      <p className="mb-2 text-sm font-semibold text-gray-700">
+                        {job.company}
+                      </p>
+                    )}
                     <div className="space-y-1 text-xs text-gray-600">
                       {job.social && (
                         <a
@@ -431,9 +433,11 @@ export default function JobsPage() {
                         <h2 className="font-display text-2xl font-bold text-brand-primary">
                           {selectedJob.title}
                         </h2>
-                        <p className="mt-1 text-lg font-semibold text-gray-700">
-                          {selectedJob.company}
-                        </p>
+                        {selectedJob.company && selectedJob.company.trim().toLowerCase() !== "unknown" && (
+                          <p className="mt-1 text-lg font-semibold text-gray-700">
+                            {selectedJob.company}
+                          </p>
+                        )}
                         {selectedJob.code && (
                           <p className="mt-2 inline-block rounded-md bg-brand-primary/10 px-2.5 py-1 text-sm font-bold text-brand-primary">
                             CODE: {selectedJob.code}
