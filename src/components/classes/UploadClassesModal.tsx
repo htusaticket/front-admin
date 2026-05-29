@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
 import { useModalLock } from "@/hooks/useModalLock";
+import { getLocalZoneLabel, localDateTimeToISO } from "@/lib/utils";
 import { useClassesStore } from "@/store/classes";
 
 interface UploadClassesModalProps {
@@ -191,19 +192,17 @@ export function UploadClassesModal({ isOpen, onClose }: UploadClassesModalProps)
   }, []);
 
   const handleSubmit = async () => {
-    const classPayloads = parsedClasses.map(cls => {
+    const classPayloads = parsedClasses.flatMap(cls => {
       const type = VALID_TYPES.includes(cls.type) ? cls.type : "REGULAR";
 
-      // Date is already normalized to YYYY-MM-DD and time to HH:MM by normalizeDate/normalizeTime
-      const isoDate = cls.date;
-      const startTime = cls.startTime;
-      const endTime = cls.endTime;
+      // Date is already normalized to YYYY-MM-DD and time to HH:MM by normalizeDate/normalizeTime.
+      // Times are interpreted in the admin's LOCAL timezone and converted to the real
+      // UTC instant, so each student later sees the class in their own timezone.
+      const startISO = localDateTimeToISO(cls.date, cls.startTime);
+      const endISO = localDateTimeToISO(cls.date, cls.endTime);
+      if (!startISO || !endISO) return [];
 
-      // Build ISO date-time strings
-      const startISO = `${isoDate}T${startTime}:00.000Z`;
-      const endISO = `${isoDate}T${endTime}:00.000Z`;
-
-      return {
+      return [{
         title: cls.title,
         type: type as "REGULAR" | "WORKSHOP" | "WEBINAR" | "QA" | "MASTERCLASS",
         startTime: startISO,
@@ -213,8 +212,13 @@ export function UploadClassesModal({ isOpen, onClose }: UploadClassesModalProps)
         description: cls.description || undefined,
         materialsLink: cls.materialsLink || undefined,
         visibleForSkillBuilderLive,
-      };
+      }];
     });
+
+    if (classPayloads.length === 0) {
+      setError("No valid classes to upload. Check the dates and times.");
+      return;
+    }
 
     const result = await bulkCreateClasses(classPayloads);
     if (result.success) {
@@ -320,6 +324,10 @@ export function UploadClassesModal({ isOpen, onClose }: UploadClassesModalProps)
                       Clear
                     </button>
                   </div>
+                  <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                    Times in the file are read in your local time ({getLocalZoneLabel()}).
+                    Each student sees the class in their own timezone.
+                  </p>
                   <div className="max-h-64 overflow-y-auto space-y-2 rounded-xl border border-gray-100 p-3">
                     {parsedClasses.map((cls) => (
                       <div key={`${cls.title}-${cls.date}-${cls.startTime}`} className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm">

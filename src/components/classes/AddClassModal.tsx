@@ -5,6 +5,7 @@ import { X, Check, Calendar, Video, Users, UploadCloud, FileText, Trash2, Loader
 import { useState, useRef } from "react";
 
 import { useModalLock } from "@/hooks/useModalLock";
+import { getLocalZoneLabel, localDateTimeToISO } from "@/lib/utils";
 import { useClassesStore } from "@/store/classes";
 
 interface AddClassModalProps {
@@ -68,9 +69,14 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
     e.preventDefault();
     setFormError(null);
 
-    // Combine date and time into ISO datetime - use UTC to preserve intended time
-    const startTime = `${formData.date}T${formData.startTime}:00.000Z`;
-    const endTime = `${formData.date}T${formData.endTime}:00.000Z`;
+    // Times are entered in the admin's LOCAL timezone and converted to the real
+    // UTC instant, so each student later sees the class in their own timezone.
+    const startTime = localDateTimeToISO(formData.date, formData.startTime);
+    const endTime = localDateTimeToISO(formData.date, formData.endTime);
+    if (!startTime || !endTime) {
+      setFormError("Invalid date or time.");
+      return;
+    }
 
     const result = await createClass({
       title: formData.title,
@@ -202,6 +208,11 @@ export function AddClassModal({ isOpen, onClose }: AddClassModalProps) {
                     </select>
                   </div>
                 </div>
+
+                <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                  Times are set in your local time ({getLocalZoneLabel()}).
+                  Each student sees the class in their own timezone.
+                </p>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>

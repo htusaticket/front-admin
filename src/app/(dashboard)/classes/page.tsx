@@ -21,6 +21,7 @@ import { AddClassModal } from "@/components/classes/AddClassModal";
 import { AttendanceModal } from "@/components/classes/AttendanceModal";
 import { UploadClassesModal } from "@/components/classes/UploadClassesModal";
 import { useModalLock } from "@/hooks/useModalLock";
+import { getLocalZoneLabel, localDateTimeToISO } from "@/lib/utils";
 import { useClassesStore } from "@/store/classes";
 import type { AdminClass, CreateClassPayload } from "@/types/admin";
 
@@ -41,7 +42,8 @@ const formatDateTime = (dateStr: string): { date: string; time: string; day: str
   
   return {
     date: date.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" }),
-    time: `${date.getUTCHours().toString().padStart(2, "0")}:${date.getUTCMinutes().toString().padStart(2, "0")}`,
+    // Shown in the admin's local timezone (matches what was entered on create).
+    time: `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`,
     day,
   };
 };
@@ -49,8 +51,9 @@ const formatDateTime = (dateStr: string): { date: string; time: string; day: str
 const formatTimeRange = (start: string, end: string): string => {
   const startDate = new Date(start);
   const endDate = new Date(end);
-  const startTime = `${startDate.getUTCHours().toString().padStart(2, "0")}:${startDate.getUTCMinutes().toString().padStart(2, "0")}`;
-  const endTime = `${endDate.getUTCHours().toString().padStart(2, "0")}:${endDate.getUTCMinutes().toString().padStart(2, "0")}`;
+  // Shown in the admin's local timezone (matches what was entered on create).
+  const startTime = `${startDate.getHours().toString().padStart(2, "0")}:${startDate.getMinutes().toString().padStart(2, "0")}`;
+  const endTime = `${endDate.getHours().toString().padStart(2, "0")}:${endDate.getMinutes().toString().padStart(2, "0")}`;
   return `${startTime} - ${endTime}`;
 };
 
@@ -103,9 +106,9 @@ export default function ClassesPage() {
     setEditForm({
       title: session.title,
       meetLink: session.meetLink || "",
-      date: `${startDate.getUTCFullYear()}-${(startDate.getUTCMonth()+1).toString().padStart(2, "0")}-${startDate.getUTCDate().toString().padStart(2, "0")}`,
-      startTime: `${startDate.getUTCHours().toString().padStart(2, "0")}:${startDate.getUTCMinutes().toString().padStart(2, "0")}`,
-      endTime: `${endDate.getUTCHours().toString().padStart(2, "0")}:${endDate.getUTCMinutes().toString().padStart(2, "0")}`,
+      date: `${startDate.getFullYear()}-${(startDate.getMonth()+1).toString().padStart(2, "0")}-${startDate.getDate().toString().padStart(2, "0")}`,
+      startTime: `${startDate.getHours().toString().padStart(2, "0")}:${startDate.getMinutes().toString().padStart(2, "0")}`,
+      endTime: `${endDate.getHours().toString().padStart(2, "0")}:${endDate.getMinutes().toString().padStart(2, "0")}`,
       type: session.type || "REGULAR",
       capacityMax: session.capacityMax != null ? String(session.capacityMax) : "",
       description: session.description && !session.description.startsWith("[RECORDING]") ? session.description : "",
@@ -117,11 +120,18 @@ export default function ClassesPage() {
   const handleEditSave = async () => {
     if (!editingClass) return;
     setIsSaving(true);
+    const startTime = localDateTimeToISO(editForm.date, editForm.startTime);
+    const endTime = localDateTimeToISO(editForm.date, editForm.endTime);
+    if (!startTime || !endTime) {
+      setIsSaving(false);
+      toast.error("Invalid date or time.");
+      return;
+    }
     const result = await updateClass(editingClass.id, {
       title: editForm.title,
       meetLink: editForm.meetLink || undefined,
-      startTime: `${editForm.date}T${editForm.startTime}:00.000Z`,
-      endTime: `${editForm.date}T${editForm.endTime}:00.000Z`,
+      startTime,
+      endTime,
       type: editForm.type,
       capacityMax: editForm.capacityMax ? parseInt(editForm.capacityMax) : undefined,
       description: editForm.description || undefined,
@@ -516,6 +526,9 @@ export default function ClassesPage() {
                   <input type="time" value={editForm.endTime} onChange={(e) => setEditForm({ ...editForm, endTime: e.target.value })} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
                 </div>
               </div>
+              <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                Times are in your local time ({getLocalZoneLabel()}). Each student sees the class in their own timezone.
+              </p>
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-gray-700">Meet Link</label>
                 <input type="url" value={editForm.meetLink} onChange={(e) => setEditForm({ ...editForm, meetLink: e.target.value })} placeholder="https://meet.google.com/..." className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-primary" />
